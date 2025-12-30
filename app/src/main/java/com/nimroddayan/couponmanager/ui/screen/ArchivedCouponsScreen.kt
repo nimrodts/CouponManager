@@ -15,16 +15,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nimroddayan.couponmanager.CouponApplication
+import com.nimroddayan.couponmanager.data.gemini.GeminiApiKeyRepository
 import com.nimroddayan.couponmanager.ui.viewmodel.CouponViewModel
-import com.nimroddayan.couponmanager.ui.viewmodel.CouponViewModelFactory
+import com.nimroddayan.couponmanager.ui.viewmodel.ViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ArchivedCouponsScreen(app: CouponApplication, onNavigateUp: () -> Unit) {
-    val couponViewModel: CouponViewModel = viewModel(factory = CouponViewModelFactory(app.database.couponDao()))
-    val archivedCoupons by couponViewModel.archivedCoupons.collectAsState()
+    val context = LocalContext.current
+    val viewModelFactory = ViewModelFactory(
+        context,
+        app.couponRepository,
+        GeminiApiKeyRepository(context)
+    )
+    val couponViewModel: CouponViewModel = viewModel(factory = viewModelFactory)
+    val archivedCoupons by couponViewModel.archivedCoupons.collectAsState(initial = emptyList())
 
     Scaffold(
         topBar = {
@@ -40,8 +48,6 @@ fun ArchivedCouponsScreen(app: CouponApplication, onNavigateUp: () -> Unit) {
     ) { paddingValues ->
         LazyColumn(modifier = Modifier.padding(paddingValues)) {
             items(archivedCoupons) { coupon ->
-                // You can reuse the CouponItem composable here, 
-                // but you might want to create a simpler version for the archive.
                 Text(text = coupon.name)
             }
         }

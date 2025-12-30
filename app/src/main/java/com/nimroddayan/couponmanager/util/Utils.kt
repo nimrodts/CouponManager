@@ -1,6 +1,7 @@
 package com.nimroddayan.couponmanager.util
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -21,7 +22,7 @@ val availableIcons = mapOf(
 )
 
 fun getIconByName(name: String): ImageVector {
-    return availableIcons[name] ?: Icons.Filled.Help // Default icon
+    return availableIcons[name] ?: Icons.AutoMirrored.Filled.Help // Default icon
 }
 
 fun getContrastColor(hexColor: String): Color {

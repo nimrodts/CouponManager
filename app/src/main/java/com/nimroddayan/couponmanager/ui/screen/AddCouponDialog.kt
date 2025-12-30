@@ -1,43 +1,25 @@
 package com.nimroddayan.couponmanager.ui.screen
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDefaults
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.nimroddayan.couponmanager.data.model.Category
 import com.nimroddayan.couponmanager.ui.viewmodel.CategoryViewModel
+import com.nimroddayan.couponmanager.ui.viewmodel.CouponViewModel
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddCouponDialog(
     categoryViewModel: CategoryViewModel,
+    couponViewModel: CouponViewModel,
     onAddCoupon: (String, Double, Long, Long) -> Unit,
     onDismiss: () -> Unit,
     onAddCategory: () -> Unit
@@ -51,12 +33,57 @@ fun AddCouponDialog(
     var showDatePicker by remember { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState(initialSelectedDateMillis = System.currentTimeMillis())
 
+    val parsedCoupon by couponViewModel.parsedCoupon.collectAsState()
+    val isLoading by couponViewModel.isLoading.collectAsState()
+    val error by couponViewModel.error.collectAsState()
+
+    val clipboardManager = LocalClipboardManager.current
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(parsedCoupon) {
+        parsedCoupon?.let { coupon ->
+            name = coupon.storeName ?: name
+            value = coupon.initialValue?.toString() ?: value
+            coupon.expirationDate?.let {
+                val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                expiration = sdf.parse(it)?.time
+            }
+            couponViewModel.clearParsedCoupon()
+        }
+    }
+
     Dialog(onDismissRequest = onDismiss) {
         Card {
             Column(
                 modifier = Modifier.padding(16.dp)
             ) {
-                Text("Add Coupon", style = androidx.compose.material3.MaterialTheme.typography.titleLarge)
+                Text("Add Coupon", style = MaterialTheme.typography.titleLarge)
+
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.padding(vertical = 8.dp))
+                }
+
+                error?.let { errorMessage ->
+                    Text(errorMessage, color = MaterialTheme.colorScheme.error)
+                    Button(onClick = { couponViewModel.clearError() }) {
+                        Text("Dismiss")
+                    }
+                }
+
+                Button(
+                    onClick = {
+                        clipboardManager.getText()?.text?.let { text ->
+                            coroutineScope.launch {
+                                couponViewModel.autofillFromClipboard(text)
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isLoading
+                ) {
+                    Text("✨ Auto-fill from Clipboard")
+                }
+
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -89,10 +116,10 @@ fun AddCouponDialog(
                         onDismissRequest = { showDatePicker = false },
                         confirmButton = {
                             TextButton(onClick = { 
-                                datePickerState.selectedDateMillis?.let { 
+                                datePickerState.selectedDateMillis?.let { date ->
                                     val timeZone = TimeZone.getDefault()
-                                    val offset = timeZone.getOffset(it)
-                                    expiration = it + offset
+                                    val offset = timeZone.getOffset(date)
+                                    expiration = date + offset
                                 }
                                 showDatePicker = false 
                             }) {
@@ -161,8 +188,8 @@ fun AddCouponDialog(
                 Button(
                     onClick = {
                         expiration?.let { exp ->
-                            selectedCategory?.let {
-                                onAddCoupon(name, value.toDouble(), exp, it.id)
+                            selectedCategory?.let { category ->
+                                onAddCoupon(name, value.toDouble(), exp, category.id)
                             }
                         }
                         onDismiss()

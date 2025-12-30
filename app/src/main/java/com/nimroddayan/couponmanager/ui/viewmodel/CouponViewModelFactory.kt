@@ -2,13 +2,17 @@ package com.nimroddayan.couponmanager.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.nimroddayan.couponmanager.data.db.CouponDao
+import com.nimroddayan.couponmanager.data.CouponRepository
+import com.nimroddayan.couponmanager.data.gemini.GeminiCouponExtractor
 
-class CouponViewModelFactory(private val couponDao: CouponDao) : ViewModelProvider.Factory {
+class CouponViewModelFactory(
+    private val couponRepository: CouponRepository,
+    private val geminiCouponExtractor: GeminiCouponExtractor
+    ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(CouponViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return CouponViewModel(couponDao) as T
+            return CouponViewModel(couponRepository, geminiCouponExtractor) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
