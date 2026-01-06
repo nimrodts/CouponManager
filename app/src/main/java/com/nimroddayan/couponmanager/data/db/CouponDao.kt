@@ -33,8 +33,11 @@ interface CouponDao {
     @Query("SELECT SUM(initialValue - currentValue) FROM coupon")
     fun getTotalSpent(): Flow<Double>
 
-    @Query("SELECT c.name, SUM(co.initialValue - co.currentValue) as totalSpent FROM coupon co JOIN category c ON co.categoryId = c.id GROUP BY c.name")
+    @Query("SELECT IFNULL(c.name, 'Uncategorized') as name, SUM(co.initialValue - co.currentValue) as totalSpent FROM coupon co LEFT JOIN category c ON co.categoryId = c.id GROUP BY c.name")
     fun getSpendingByCategory(): Flow<List<CategorySpending>>
+
+    @Query("UPDATE coupon SET categoryId = :newCategoryId WHERE categoryId = :oldCategoryId")
+    suspend fun updateCategoryForCoupons(oldCategoryId: Long, newCategoryId: Long?)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(vararg coupons: Coupon): List<Long>

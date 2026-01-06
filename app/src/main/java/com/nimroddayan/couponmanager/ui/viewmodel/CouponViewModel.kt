@@ -3,6 +3,7 @@ package com.nimroddayan.couponmanager.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nimroddayan.couponmanager.data.CouponRepository
+import com.nimroddayan.couponmanager.data.DuplicateRedeemCodeException
 import com.nimroddayan.couponmanager.data.gemini.GeminiCouponExtractor
 import com.nimroddayan.couponmanager.data.gemini.ParsedCoupon
 import com.nimroddayan.couponmanager.data.model.Coupon
@@ -28,12 +29,15 @@ class CouponViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
-    fun insert(coupon: Coupon) {
+    fun insert(coupon: Coupon, onSuccess: () -> Unit) {
         viewModelScope.launch {
             try {
                 couponRepository.insert(coupon)
-            } catch (e: Exception) {
+                onSuccess()
+            } catch (e: DuplicateRedeemCodeException) {
                 _error.value = e.message
+            } catch (e: Exception) {
+                _error.value = "An unexpected error occurred."
             }
         }
     }

@@ -48,7 +48,7 @@ import java.util.TimeZone
 fun AddCouponDialog(
     categoryViewModel: CategoryViewModel,
     couponViewModel: CouponViewModel,
-    onAddCoupon: (String, Double, Long, Long, String?, String?) -> Unit,
+    onAddCoupon: (String, Double, Long, Long?, String?, String?, () -> Unit) -> Unit,
     onDismiss: () -> Unit,
     onAddCategory: () -> Unit
 ) {
@@ -182,7 +182,7 @@ fun AddCouponDialog(
                             OutlinedTextField(
                                 modifier = Modifier.menuAnchor().fillMaxWidth(),
                                 readOnly = true,
-                                value = selectedCategory?.name ?: "",
+                                value = selectedCategory?.name ?: "None",
                                 onValueChange = {},
                                 label = { Text("Category") },
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -191,6 +191,14 @@ fun AddCouponDialog(
                                 expanded = expanded,
                                 onDismissRequest = { expanded = false },
                             ) {
+                                DropdownMenuItem(
+                                    text = { Text("None") },
+                                    onClick = {
+                                        selectedCategory = null
+                                        expanded = false
+                                    },
+                                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                                )
                                 categories.forEach { category ->
                                     DropdownMenuItem(
                                         text = { Text(category.name) },
@@ -200,7 +208,7 @@ fun AddCouponDialog(
                                         },
                                         contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                                     )
-                                }
+                                 }
                             }
                         }
                     }
@@ -210,14 +218,14 @@ fun AddCouponDialog(
                     Button(
                         onClick = {
                             expiration?.let { exp ->
-                                selectedCategory?.let { category ->
-                                    onAddCoupon(name, value.toDouble(), exp, category.id, redeemCode, creationMessage)
+                                val categoryId = selectedCategory?.id
+                                onAddCoupon(name, value.toDoubleOrNull() ?: 0.0, exp, categoryId, redeemCode, creationMessage) {
+                                    onDismiss()
                                 }
                             }
-                            onDismiss()
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = selectedCategory != null && expiration != null
+                        enabled = expiration != null && name.isNotBlank() && value.isNotBlank()
                     ) {
                         Text("Save")
                     }

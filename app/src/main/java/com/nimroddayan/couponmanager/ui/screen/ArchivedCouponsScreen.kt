@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nimroddayan.couponmanager.CouponApplication
 import com.nimroddayan.couponmanager.data.gemini.GeminiApiKeyRepository
+import com.nimroddayan.couponmanager.data.model.Category
 import com.nimroddayan.couponmanager.data.model.Coupon
 import com.nimroddayan.couponmanager.ui.viewmodel.CategoryViewModel
 import com.nimroddayan.couponmanager.ui.viewmodel.CategoryViewModelFactory
@@ -68,7 +69,7 @@ fun ArchivedCouponsScreen(
         GeminiApiKeyRepository(context)
     )
     val couponViewModel: CouponViewModel = viewModel(factory = viewModelFactory)
-    val categoryViewModel: CategoryViewModel = viewModel(factory = CategoryViewModelFactory(app.database.categoryDao()))
+    val categoryViewModel: CategoryViewModel = viewModel(factory = CategoryViewModelFactory(app.database))
     val archivedCoupons by couponViewModel.archivedCoupons.collectAsState(initial = emptyList())
     val categories by categoryViewModel.allCategories.collectAsState(initial = emptyList())
 
@@ -114,15 +115,13 @@ fun ArchivedCouponsScreen(
         LazyColumn(modifier = Modifier.padding(paddingValues)) {
             items(archivedCoupons) { coupon ->
                 val category = categories.find { it.id == coupon.categoryId }
-                if (category != null) {
-                    ArchivedCouponItem(
-                        coupon = coupon,
-                        category = category,
-                        onUnarchive = { showUnarchiveDialog = coupon },
-                        onDelete = { showDeleteDialog = coupon },
-                        onHistoryClick = { onNavigateToHistory(coupon.id) }
-                    )
-                }
+                ArchivedCouponItem(
+                    coupon = coupon,
+                    category = category,
+                    onUnarchive = { showUnarchiveDialog = coupon },
+                    onDelete = { showDeleteDialog = coupon },
+                    onHistoryClick = { onNavigateToHistory(coupon.id) }
+                )
             }
         }
     }
@@ -131,12 +130,16 @@ fun ArchivedCouponsScreen(
 @Composable
 fun ArchivedCouponItem(
     coupon: Coupon,
-    category: com.nimroddayan.couponmanager.data.model.Category,
+    category: Category?,
     onUnarchive: () -> Unit,
     onDelete: () -> Unit,
     onHistoryClick: () -> Unit,
 ) {
     var showMenu by remember { mutableStateOf(false) }
+
+    val categoryName = category?.name ?: "Uncategorized"
+    val categoryColor = category?.colorHex ?: "#808080"
+    val categoryIcon = category?.iconName ?: "help"
 
     Surface {
         Column {
@@ -149,18 +152,18 @@ fun ArchivedCouponItem(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .background(Color(android.graphics.Color.parseColor(category.colorHex)))
+                        .background(Color(android.graphics.Color.parseColor(categoryColor)))
                 ) {
                     Icon(
-                        imageVector = getIconByName(category.iconName),
-                        contentDescription = category.name,
+                        imageVector = getIconByName(categoryIcon),
+                        contentDescription = categoryName,
                         modifier = Modifier.align(Alignment.Center),
                         tint = MaterialTheme.colorScheme.onPrimary
                     )
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(text = coupon.name, fontWeight = FontWeight.Bold)
-                    Text(text = category.name, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), modifier = Modifier.padding(top = 4.dp))
+                    Text(text = categoryName, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), modifier = Modifier.padding(top = 4.dp))
                     val expirationText = "Used on: ${SimpleDateFormat("MM/dd/yyyy", Locale.getDefault()).format(Date(coupon.expirationDate))}"
                     Text(text = expirationText, fontSize = 12.sp)
                 }

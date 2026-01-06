@@ -2,13 +2,13 @@ package com.nimroddayan.couponmanager.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.nimroddayan.couponmanager.data.db.CouponDao
+import com.nimroddayan.couponmanager.data.db.AppDatabase
 
-class DashboardViewModelFactory(private val couponDao: CouponDao) : ViewModelProvider.Factory {
+class DashboardViewModelFactory(private val db: AppDatabase) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(DashboardViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return DashboardViewModel(couponDao) as T
+            return DashboardViewModel(db) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

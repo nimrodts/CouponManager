@@ -1,5 +1,8 @@
 package com.nimroddayan.couponmanager
 
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
@@ -17,6 +20,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SmartToy
@@ -36,7 +40,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -45,6 +48,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.nimroddayan.couponmanager.data.DatabaseManager
 import com.nimroddayan.couponmanager.data.gemini.GeminiApiKeyRepository
 import com.nimroddayan.couponmanager.data.model.Coupon
 import com.nimroddayan.couponmanager.ui.screen.AddCouponDialog
@@ -53,6 +57,7 @@ import com.nimroddayan.couponmanager.ui.screen.ArchivedCouponsScreen
 import com.nimroddayan.couponmanager.ui.screen.CategoryManagementScreen
 import com.nimroddayan.couponmanager.ui.screen.CouponHistoryScreen
 import com.nimroddayan.couponmanager.ui.screen.DashboardScreen
+import com.nimroddayan.couponmanager.ui.screen.DatabaseSettingsScreen
 import com.nimroddayan.couponmanager.ui.screen.HomeScreen
 import com.nimroddayan.couponmanager.ui.screen.SettingsScreen
 import com.nimroddayan.couponmanager.ui.theme.CouponManagerTheme
@@ -71,10 +76,11 @@ sealed class Screen(val route: String, val icon: ImageVector, val title: String)
     object Home : Screen("home", Icons.Filled.Home, "Home")
     object Dashboard : Screen("dashboard", Icons.Filled.Dashboard, "Dashboard")
     object Settings : Screen("settings", Icons.Filled.Settings, "Settings")
-    object CategoryManagement : Screen("category_management", Icons.Filled.Home, "Manage Categories") // Icon isn't used here
+    object CategoryManagement : Screen("category_management", Icons.Filled.Home, "Manage Categories")
     object ArchivedCoupons : Screen("archived_coupons", Icons.Filled.Archive, "Archived Coupons")
     object AiSettings : Screen("ai_settings", Icons.Filled.SmartToy, "AI Settings")
     object CouponHistory : Screen("coupon_history/{couponId}", Icons.Filled.Home, "History")
+    object DatabaseSettings : Screen("database_settings", Icons.Filled.Dns, "Database")
 }
 
 @Composable
@@ -82,6 +88,7 @@ fun App(app: CouponApplication) {
     val context = LocalContext.current
     val themeViewModel: com.nimroddayan.couponmanager.ui.viewmodel.ThemeViewModel = viewModel(factory = com.nimroddayan.couponmanager.ui.viewmodel.ThemeViewModelFactory(context))
     val isDarkTheme by themeViewModel.isDarkTheme.collectAsState()
+    val databaseManager = remember { DatabaseManager(context) }
 
     val viewModelFactory = ViewModelFactory(
         context,
@@ -104,10 +111,10 @@ fun App(app: CouponApplication) {
                     isDarkTheme = isDarkTheme,
                     onThemeChange = { themeViewModel.setTheme(it) },
                     onManageCategories = { navController.navigate(Screen.CategoryManagement.route) },
-                    onResetDatabase = {},
                     onNavigateToArchive = { navController.navigate(Screen.ArchivedCoupons.route) },
                     onNavigateToAiSettings = { navController.navigate(Screen.AiSettings.route) },
-                    onNavigateToHistory = { couponId -> navController.navigate("coupon_history/$couponId") }
+                    onNavigateToHistory = { couponId -> navController.navigate("coupon_history/$couponId") },
+                    onNavigateToDatabaseSettings = { navController.navigate(Screen.DatabaseSettings.route) }
                 )
             }
             composable(
@@ -115,7 +122,7 @@ fun App(app: CouponApplication) {
                 enterTransition = { slideInHorizontally(initialOffsetX = { it }) },
                 popExitTransition = { slideOutHorizontally(targetOffsetX = { it }) }
             ) {
-                val categoryViewModel: CategoryViewModel = viewModel(factory = CategoryViewModelFactory(app.database.categoryDao()))
+                val categoryViewModel: CategoryViewModel = viewModel(factory = CategoryViewModelFactory(app.database))
                 CategoryManagementScreen(
                     viewModel = categoryViewModel,
                     onNavigateUp = { navController.popBackStack() }
@@ -156,8 +163,28 @@ fun App(app: CouponApplication) {
                     viewModelFactory = historyViewModelFactory
                 )
             }
+            composable(
+                Screen.DatabaseSettings.route,
+                enterTransition = { slideInHorizontally(initialOffsetX = { it }) },
+                popExitTransition = { slideOutHorizontally(targetOffsetX = { it }) }
+            ) {
+                DatabaseSettingsScreen(
+                    onNavigateUp = { navController.popBackStack() },
+                    onResetDatabase = {
+                        databaseManager.resetDatabase()
+                        restartApp(context)
+                    },
+                )
+            }
         }
     }
+}
+
+private fun restartApp(context: Context) {
+    val intent = Intent(context, MainActivity::class.java)
+    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+    context.startActivity(intent)
+    (context as? Activity)?.finish()
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -168,15 +195,15 @@ fun MainScaffold(
     isDarkTheme: Boolean,
     onThemeChange: (Boolean) -> Unit,
     onManageCategories: () -> Unit,
-    onResetDatabase: () -> Unit,
     onNavigateToArchive: () -> Unit,
     onNavigateToAiSettings: () -> Unit,
     onNavigateToHistory: (Long) -> Unit,
+    onNavigateToDatabaseSettings: () -> Unit,
 ) {
     val couponViewModel: CouponViewModel = viewModel(factory = viewModelFactory)
     val settingsViewModel: SettingsViewModel = viewModel(factory = viewModelFactory)
-    val categoryViewModel: CategoryViewModel = viewModel(factory = CategoryViewModelFactory(app.database.categoryDao()))
-    val dashboardViewModel: DashboardViewModel = viewModel(factory = DashboardViewModelFactory(app.database.couponDao()))
+    val categoryViewModel: CategoryViewModel = viewModel(factory = CategoryViewModelFactory(app.database))
+    val dashboardViewModel: DashboardViewModel = viewModel(factory = DashboardViewModelFactory(app.database))
 
     val coupons by couponViewModel.allCoupons.collectAsState(initial = emptyList())
     var showAddCouponDialog by remember { mutableStateOf(false) }
@@ -234,16 +261,18 @@ fun MainScaffold(
                         onAddCoupon = { showAddCouponDialog = true },
                         onNavigateToHistory = onNavigateToHistory
                     )
+
                     Screen.Dashboard -> DashboardScreen(viewModel = dashboardViewModel)
                     Screen.Settings -> SettingsScreen(
                         viewModel = settingsViewModel,
                         isDarkTheme = isDarkTheme,
                         onThemeChange = onThemeChange,
                         onManageCategories = onManageCategories,
-                        onResetDatabase = onResetDatabase,
                         onNavigateToArchive = onNavigateToArchive,
                         onNavigateToAiSettings = onNavigateToAiSettings,
+                        onNavigateToDatabaseSettings = onNavigateToDatabaseSettings
                     )
+
                     else -> {}
                 }
             }
@@ -252,7 +281,7 @@ fun MainScaffold(
                 AddCouponDialog(
                     categoryViewModel = categoryViewModel,
                     couponViewModel = couponViewModel,
-                    onAddCoupon = { name, value, expiration, categoryId, redeemCode, creationMessage ->
+                    onAddCoupon = { name, value, expiration, categoryId, redeemCode, creationMessage, onSuccess ->
                         val newCoupon = Coupon(
                             name = name,
                             currentValue = value,
@@ -262,7 +291,7 @@ fun MainScaffold(
                             redeemCode = redeemCode,
                             creationMessage = creationMessage,
                         )
-                        couponViewModel.insert(newCoupon)
+                        couponViewModel.insert(newCoupon, onSuccess)
                     },
                     onDismiss = { showAddCouponDialog = false },
                     onAddCategory = {

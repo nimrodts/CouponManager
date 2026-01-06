@@ -1,8 +1,10 @@
 package com.nimroddayan.couponmanager.data.db
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 import com.nimroddayan.couponmanager.data.model.Category
 import kotlinx.coroutines.flow.Flow
 
@@ -13,6 +15,12 @@ interface CategoryDao {
 
     @Insert
     suspend fun insert(category: Category): Long
+
+    @Update
+    suspend fun update(category: Category)
+
+    @Delete
+    suspend fun delete(category: Category)
 
     @Query("DELETE FROM category")
     suspend fun clearAll()

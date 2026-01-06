@@ -17,6 +17,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -50,6 +52,8 @@ fun CategoryManagementScreen(
 ) {
     val categories by viewModel.allCategories.collectAsState()
     var showAddCategoryDialog by remember { mutableStateOf(false) }
+    var categoryToDelete by remember { mutableStateOf<Category?>(null) }
+    var categoryToRename by remember { mutableStateOf<Category?>(null) }
 
     Scaffold(
         topBar = {
@@ -81,7 +85,11 @@ fun CategoryManagementScreen(
             Surface {
                 LazyColumn {
                     items(categories) { category ->
-                        CategoryItem(category = category)
+                        CategoryItem(
+                            category = category,
+                            onEditClick = { categoryToRename = category },
+                            onDeleteClick = { categoryToDelete = category }
+                        )
                         HorizontalDivider(modifier = Modifier.padding(start = 72.dp))
                     }
                 }
@@ -97,10 +105,37 @@ fun CategoryManagementScreen(
             onDismiss = { showAddCategoryDialog = false }
         )
     }
+
+    categoryToRename?.let { category ->
+        RenameCategoryDialog(
+            category = category,
+            onConfirm = { newName ->
+                viewModel.update(category.copy(name = newName))
+                categoryToRename = null
+            },
+            onDismiss = { categoryToRename = null }
+        )
+    }
+
+    categoryToDelete?.let {
+        ConfirmationDialog(
+            onConfirm = {
+                viewModel.delete(it)
+                categoryToDelete = null
+            },
+            onDismiss = { categoryToDelete = null },
+            title = "Delete Category",
+            message = "Are you sure you want to delete this category? All coupons in this category will be moved to the \"None\" category."
+        )
+    }
 }
 
 @Composable
-fun CategoryItem(category: Category) {
+fun CategoryItem(
+    category: Category,
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -126,5 +161,11 @@ fun CategoryItem(category: Category) {
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodyLarge
         )
+        IconButton(onClick = onEditClick) {
+            Icon(Icons.Default.Edit, contentDescription = "Rename Category")
+        }
+        IconButton(onClick = onDeleteClick) {
+            Icon(Icons.Default.Delete, contentDescription = "Delete Category")
+        }
     }
 }

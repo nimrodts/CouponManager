@@ -20,19 +20,18 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.nimroddayan.couponmanager.data.model.Coupon
+import com.nimroddayan.couponmanager.data.model.Category
 import kotlinx.coroutines.delay
 
 @Composable
-fun UseCouponDialog(
-    coupon: Coupon,
-    onConfirm: (Double) -> Unit,
+fun RenameCategoryDialog(
+    category: Category,
+    onConfirm: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var amountToUse by remember { mutableStateOf("") }
+    var newName by remember { mutableStateOf(category.name) }
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -41,28 +40,17 @@ fun UseCouponDialog(
             Column(
                 modifier = Modifier.padding(16.dp)
             ) {
-                Text("Use Coupon", style = androidx.compose.material3.MaterialTheme.typography.titleLarge)
-                Text("Current Balance: ₪${String.format("%.2f", coupon.currentValue)}")
+                Text("Rename Category", style = androidx.compose.material3.MaterialTheme.typography.titleLarge)
                 OutlinedTextField(
-                    value = amountToUse,
-                    onValueChange = {
-                        val enteredValue = it.toDoubleOrNull() ?: 0.0
-                        amountToUse = if (enteredValue > coupon.currentValue) {
-                            coupon.currentValue.toString()
-                        } else {
-                            it
-                        }
-                    },
-                    label = { Text("Amount to use") },
+                    value = newName,
+                    onValueChange = { newName = it },
+                    label = { Text("New category name") },
                     keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Number,
                         imeAction = ImeAction.Done
                     ),
                     keyboardActions = KeyboardActions(
                         onDone = {
-                            val amount = amountToUse.toDoubleOrNull() ?: 0.0
-                            onConfirm(amount)
-                            onDismiss()
+                            onConfirm(newName)
                             keyboardController?.hide()
                         }
                     ),
@@ -72,13 +60,11 @@ fun UseCouponDialog(
                 )
                 Button(
                     onClick = {
-                        val amount = amountToUse.toDoubleOrNull() ?: 0.0
-                        onConfirm(amount)
-                        onDismiss()
+                        onConfirm(newName)
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Confirm")
+                    Text("Rename")
                 }
             }
         }

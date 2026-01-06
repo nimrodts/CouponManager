@@ -81,39 +81,41 @@ fun HistoryItem(
     operation: CouponHistory,
     onUndo: (CouponHistory) -> Unit,
 ) {
-    val coupon = Json.decodeFromString<Coupon>(operation.couponState)
+    operation.couponState?.let { couponState ->
+        val coupon = Json.decodeFromString<Coupon>(couponState)
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp)
-    ) {
-        Row(
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(8.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Coupon: ${coupon.name}")
-                coupon.redeemCode?.takeIf { it.isNotBlank() }?.let {
-                    Text("Redeem Code: $it", fontSize = 12.sp)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Coupon: ${coupon.name}")
+                    coupon.redeemCode?.takeIf { it.isNotBlank() }?.let {
+                        Text("Redeem Code: $it", fontSize = 12.sp)
+                    }
+                    Text("Operation: ${operation.action}", fontSize = 12.sp)
+                    if (operation.action == "Coupon Used") {
+                        Text("Amount Used: ₪${operation.changeSummary}", fontSize = 12.sp)
+                    } else {
+                        Text(operation.changeSummary, fontSize = 12.sp)
+                    }
+                    Text(
+                        text = SimpleDateFormat("MM/dd/yyyy hh:mm a", Locale.getDefault()).format(operation.timestamp),
+                        fontSize = 12.sp
+                    )
                 }
-                Text("Operation: ${operation.action}", fontSize = 12.sp)
-                if (operation.action == "Coupon Used") {
-                    Text("Amount Used: ₪${operation.changeSummary}", fontSize = 12.sp)
-                } else {
-                    Text(operation.changeSummary, fontSize = 12.sp)
-                }
-                Text(
-                    text = SimpleDateFormat("MM/dd/yyyy hh:mm a", Locale.getDefault()).format(operation.timestamp),
-                    fontSize = 12.sp
-                )
-            }
-            if (!operation.action.equals("Coupon Created", ignoreCase = true)) {
-                IconButton(onClick = { onUndo(operation) }) {
-                    Icon(Icons.Filled.Undo, contentDescription = "Undo")
+                if (!operation.action.equals("Coupon Created", ignoreCase = true)) {
+                    IconButton(onClick = { onUndo(operation) }) {
+                        Icon(Icons.Filled.Undo, contentDescription = "Undo")
+                    }
                 }
             }
         }

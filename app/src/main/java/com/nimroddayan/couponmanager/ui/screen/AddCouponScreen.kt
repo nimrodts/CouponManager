@@ -91,12 +91,12 @@ fun AddCouponDialog(
                             val calendar = Calendar.getInstance()
                             calendar.set(year, month, day)
 
-                            selectedCategory?.let { 
-                                onAddCoupon(name, value.toDouble(), calendar.timeInMillis, it.id)
-                            }
+                            val categoryId = selectedCategory?.id ?: 1L
+                            onAddCoupon(name, value.toDouble(), calendar.timeInMillis, categoryId)
                             onDismiss()
                         }
                     },
+                    enabled = name.isNotBlank() && value.isNotBlank() && expiration.isNotBlank(),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Save")

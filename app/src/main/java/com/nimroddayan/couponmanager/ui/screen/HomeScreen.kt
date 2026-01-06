@@ -3,6 +3,7 @@ package com.nimroddayan.couponmanager.ui.screen
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,8 +15,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
@@ -24,11 +29,13 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,7 +44,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,9 +56,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nimroddayan.couponmanager.data.model.Category
 import com.nimroddayan.couponmanager.data.model.Coupon
 import com.nimroddayan.couponmanager.ui.viewmodel.CategoryViewModel
 import com.nimroddayan.couponmanager.ui.viewmodel.CouponViewModel
@@ -76,27 +89,77 @@ fun HomeScreen(
     var showRedeemCodeDialog by remember { mutableStateOf<String?>(null) }
     var showOriginalMessageDialog by remember { mutableStateOf<String?>(null) }
 
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedCategories by remember { mutableStateOf(emptySet<Category>()) }
+
+    val filteredCoupons = coupons.filter { coupon ->
+        val searchMatch = coupon.name.contains(searchQuery, ignoreCase = true)
+        val categoryMatch = selectedCategories.isEmpty() || selectedCategories.any { it.id == coupon.categoryId }
+        searchMatch && categoryMatch
+    }
+
+    val focusManager = LocalFocusManager.current
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(listState.isScrollInProgress) {
+        if (listState.isScrollInProgress) {
+            focusManager.clearFocus()
+        }
+    }
+
     Scaffold(
+        modifier = Modifier.pointerInput(Unit) {
+            detectTapGestures(onTap = {
+                focusManager.clearFocus()
+            })
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddCoupon) {
                 Icon(Icons.Filled.Add, contentDescription = "Add Coupon")
             }
         }
     ) { paddingValues ->
-        if (coupons.isEmpty()) {
-            Box(
+        Column(modifier = Modifier.padding(paddingValues)) {
+            TextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                label = { Text("Search Coupons") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("No coupons yet. Tap the + button to add one!")
+                    .fillMaxWidth()
+                    .padding(8.dp)
+            )
+
+            LazyRow(modifier = Modifier.padding(horizontal = 8.dp)) {
+                items(categories) { category ->
+                    FilterChip(
+                        selected = selectedCategories.contains(category),
+                        onClick = {
+                            selectedCategories = if (selectedCategories.contains(category)) {
+                                selectedCategories - category
+                            } else {
+                                selectedCategories + category
+                            }
+                        },
+                        label = { Text(category.name) },
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                }
             }
-        } else {
-            LazyColumn(modifier = Modifier.padding(paddingValues)) {
-                items(coupons) { coupon ->
-                    val category = categories.find { it.id == coupon.categoryId }
-                    if (category != null) {
+
+            if (filteredCoupons.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No coupons found. Try a different filter!")
+                }
+            } else {
+                LazyColumn(state = listState) {
+                    items(filteredCoupons) { coupon ->
+                        val category = categories.find { it.id == coupon.categoryId }
                         CouponItem(
                             coupon = coupon,
                             category = category,
@@ -177,7 +240,7 @@ fun HomeScreen(
 @Composable
 fun CouponItem(
     coupon: Coupon,
-    category: com.nimroddayan.couponmanager.data.model.Category,
+    category: Category?,
     onUseClick: () -> Unit,
     onEditClick: () -> Unit,
     onArchiveClick: () -> Unit,
@@ -187,6 +250,10 @@ fun CouponItem(
     onViewMessageClick: () -> Unit,
 ) {
     var showMenu by remember { mutableStateOf(false) }
+
+    val categoryName = category?.name ?: "Uncategorized"
+    val categoryColor = category?.colorHex ?: "#808080"
+    val categoryIcon = category?.iconName ?: "help"
 
     Surface(
         modifier = Modifier.combinedClickable(
@@ -204,18 +271,18 @@ fun CouponItem(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .background(Color(android.graphics.Color.parseColor(category.colorHex)))
+                        .background(Color(android.graphics.Color.parseColor(categoryColor)))
                 ) {
                     Icon(
-                        imageVector = getIconByName(category.iconName),
-                        contentDescription = category.name,
+                        imageVector = getIconByName(categoryIcon),
+                        contentDescription = categoryName,
                         modifier = Modifier.align(Alignment.Center),
-                        tint = getContrastColor(category.colorHex)
+                        tint = getContrastColor(categoryColor)
                     )
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(text = coupon.name, fontWeight = FontWeight.Bold)
-                    Text(text = category.name, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), modifier = Modifier.padding(top = 4.dp))
+                    Text(text = categoryName, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), modifier = Modifier.padding(top = 4.dp))
                     val expirationText = "Expires: ${SimpleDateFormat("MM/dd/yyyy", Locale.getDefault()).format(Date(coupon.expirationDate))}"
                     val expirationColor = if (coupon.expirationDate < System.currentTimeMillis()) MaterialTheme.colorScheme.error else Color.Unspecified
                     Text(text = expirationText, color = expirationColor, fontSize = 12.sp)
