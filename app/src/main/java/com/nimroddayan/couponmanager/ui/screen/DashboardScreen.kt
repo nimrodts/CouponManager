@@ -30,16 +30,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.geometry.*
+import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -160,16 +155,20 @@ fun PieChart(data: List<com.nimroddayan.couponmanager.data.model.CategorySpendin
 @Composable
 fun SpendingByMonth(spendingByMonth: List<MonthlySpending>) {
     var expanded by remember { mutableStateOf(false) }
-    val itemsToShow = if (expanded) spendingByMonth else spendingByMonth.take(6)
+    // Assuming spendingByMonth is sorted chronologically from the ViewModel
+    val chartData = if (expanded) spendingByMonth else spendingByMonth.takeLast(6)
 
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Text("Spending by Month", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
-        SpendingByMonthChart(data = itemsToShow)
+        SpendingByMonthChart(data = chartData)
         Spacer(modifier = Modifier.height(16.dp))
-        Text("View Full History", modifier = Modifier.clickable { expanded = !expanded })
+        Text(
+            text = if (expanded) "Show Less" else "View Full History",
+            modifier = Modifier.clickable { expanded = !expanded }
+        )
         if (expanded) {
-            MonthlySpendingTable(data = spendingByMonth)
+            MonthlySpendingTable(data = spendingByMonth.reversed())
         }
     }
 }
