@@ -13,16 +13,37 @@ import kotlinx.coroutines.launch
 class DatabaseManager(private val context: Context) {
 
     fun exportDatabase(uri: Uri) {
-        checkpoint()
-        val dbFile = context.getDatabasePath("coupon_database")
-        FileInputStream(dbFile).use { input ->
-            context.contentResolver.openOutputStream(uri)?.use { output -> input.copyTo(output) }
+        val tempFile = java.io.File(context.cacheDir, "backup_temp.db")
+        if (createBackup(tempFile)) {
+            FileInputStream(tempFile).use { input ->
+                context.contentResolver.openOutputStream(uri)?.use { output ->
+                    input.copyTo(output)
+                }
+            }
+            tempFile.delete()
+        }
+    }
+
+    fun createBackup(destFile: java.io.File): Boolean {
+        return try {
+            val db = AppDatabase.getDatabase(context)
+            // Force WAL merge and block until done
+            db.openHelper.writableDatabase.query("PRAGMA wal_checkpoint(TRUNCATE)").close()
+            AppDatabase.destroyInstance()
+
+            val dbFile = context.getDatabasePath("coupon_database")
+            FileInputStream(dbFile).use { input ->
+                FileOutputStream(destFile).use { output -> input.copyTo(output) }
+            }
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
         }
     }
 
     fun importDatabase(uri: Uri): Boolean {
         // First, close the existing database to release the lock
-        AppDatabase.getDatabase(context).close()
         AppDatabase.destroyInstance()
 
         val dbFile = context.getDatabasePath("coupon_database")
@@ -53,13 +74,10 @@ class DatabaseManager(private val context: Context) {
         }
     }
 
-    fun checkpoint() {
-        val db = AppDatabase.getDatabase(context)
-        db.openHelper.writableDatabase.query("PRAGMA wal_checkpoint(FULL)").close()
-    }
+    // Removed standalone checkpoint as it is now integrated into createBackup
+    // fun checkpoint() { ... }
 
     fun replaceDatabase(newDbFile: java.io.File): Boolean {
-        AppDatabase.getDatabase(context).close()
         AppDatabase.destroyInstance()
 
         val dbFile = context.getDatabasePath("coupon_database")

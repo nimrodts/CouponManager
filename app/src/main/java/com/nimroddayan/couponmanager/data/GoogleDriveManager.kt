@@ -53,9 +53,12 @@ class GoogleDriveManager(private val context: Context) {
                             .setApplicationName("CouponManager")
                             .build()
 
-            // 2. Prepare Database File (Checkpointing should be done by caller)
-            val dbFile = context.getDatabasePath("coupon_database")
-            if (!dbFile.exists()) throw Exception("Database not found")
+            // 2. Prepare Database Backup
+            val tempBackupFile = File(context.cacheDir, "drive_backup_temp.db")
+            val databaseManager = DatabaseManager(context)
+            if (!databaseManager.createBackup(tempBackupFile)) {
+                throw Exception("Failed to create local backup file")
+            }
 
             // 3. Metadata
             val fileMetadata = com.google.api.services.drive.model.File()
@@ -71,15 +74,19 @@ class GoogleDriveManager(private val context: Context) {
                             .setSpaces("drive")
                             .execute()
 
-            val mediaContent = FileContent("application/x-sqlite3", dbFile)
+            val mediaContent = FileContent("application/x-sqlite3", tempBackupFile)
 
-            if (fileList.files.isNotEmpty()) {
-                // Update existing
-                val fileId = fileList.files[0].id
-                googleDriveService.files().update(fileId, null, mediaContent).execute()
-            } else {
-                // Create new
-                googleDriveService.files().create(fileMetadata, mediaContent).execute()
+            try {
+                if (fileList.files.isNotEmpty()) {
+                    // Update existing
+                    val fileId = fileList.files[0].id
+                    googleDriveService.files().update(fileId, null, mediaContent).execute()
+                } else {
+                    // Create new
+                    googleDriveService.files().create(fileMetadata, mediaContent).execute()
+                }
+            } finally {
+                tempBackupFile.delete()
             }
         }
     }
@@ -132,5 +139,39 @@ class GoogleDriveManager(private val context: Context) {
 
     fun getTempRestoreFile(): File {
         return File(context.cacheDir, "restore_temp.db")
+    }
+
+    suspend fun getBackupMetadata(account: GoogleSignInAccount): Long? {
+        return withContext(Dispatchers.IO) {
+            val credential =
+                    GoogleAccountCredential.usingOAuth2(
+                            context,
+                            Collections.singleton(DriveScopes.DRIVE_FILE)
+                    )
+            credential.selectedAccount = account.account
+            val googleDriveService =
+                    Drive.Builder(
+                                    AndroidHttp.newCompatibleTransport(),
+                                    GsonFactory.getDefaultInstance(),
+                                    credential
+                            )
+                            .setApplicationName("CouponManager")
+                            .build()
+
+            val fileList =
+                    googleDriveService
+                            .files()
+                            .list()
+                            .setQ("name = 'coupon_manager_backup.db' and trashed = false")
+                            .setSpaces("drive")
+                            .setFields("files(modifiedTime)")
+                            .execute()
+
+            if (fileList.files.isNotEmpty()) {
+                fileList.files[0].modifiedTime.value
+            } else {
+                null
+            }
+        }
     }
 }

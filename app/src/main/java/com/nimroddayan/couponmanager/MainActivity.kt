@@ -9,9 +9,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            CouponManagerTheme {
-                App(application as CouponApplication)
-            }
+            val destination = intent.getStringExtra("destination")
+            CouponManagerTheme { App(application as CouponApplication, destination) }
         }
     }
 }

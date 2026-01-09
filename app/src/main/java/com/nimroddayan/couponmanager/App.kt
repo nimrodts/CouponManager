@@ -29,6 +29,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -84,7 +85,7 @@ sealed class Screen(val route: String, val icon: ImageVector, val title: String)
 }
 
 @Composable
-fun App(app: CouponApplication) {
+fun App(app: CouponApplication, startDestination: String? = null) {
         val context = LocalContext.current
         val themeViewModel: com.nimroddayan.couponmanager.ui.viewmodel.ThemeViewModel =
                 viewModel(
@@ -109,6 +110,12 @@ fun App(app: CouponApplication) {
 
         CouponManagerTheme(darkTheme = isDarkTheme) {
                 val navController = rememberNavController()
+
+                LaunchedEffect(startDestination) {
+                        if (startDestination == "database_settings") {
+                                navController.navigate(Screen.DatabaseSettings.route)
+                        }
+                }
 
                 NavHost(navController = navController, startDestination = "main") {
                         composable(

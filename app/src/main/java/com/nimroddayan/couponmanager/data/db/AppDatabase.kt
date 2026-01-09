@@ -123,9 +123,17 @@ abstract class AppDatabase : RoomDatabase() {
                     }
                 }
 
+        @Volatile private var isShutdown = false
+
         fun getDatabase(context: Context): AppDatabase {
+            if (isShutdown) {
+                throw IllegalStateException("Database is shutting down")
+            }
             return INSTANCE
                     ?: synchronized(this) {
+                        if (isShutdown) {
+                            throw IllegalStateException("Database is shutting down")
+                        }
                         val instance =
                                 Room.databaseBuilder(
                                                 context.applicationContext,
@@ -145,7 +153,17 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         fun destroyInstance() {
+            isShutdown = true
+            try {
+                INSTANCE?.close()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
             INSTANCE = null
+        }
+
+        fun enableAccess() {
+            isShutdown = false
         }
     }
 }

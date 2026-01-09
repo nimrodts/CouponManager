@@ -5,6 +5,28 @@ import com.nimroddayan.couponmanager.data.CouponRepository
 import com.nimroddayan.couponmanager.data.db.AppDatabase
 
 class CouponApplication : Application() {
-    val database: AppDatabase by lazy { AppDatabase.getDatabase(this) }
-    val couponRepository: CouponRepository by lazy { CouponRepository(database.couponDao(), database.couponHistoryDao()) }
+    private var _database: AppDatabase? = null
+    val database: AppDatabase
+        get() {
+            if (_database == null) {
+                _database = AppDatabase.getDatabase(this)
+            }
+            return _database!!
+        }
+
+    private var _couponRepository: CouponRepository? = null
+    val couponRepository: CouponRepository
+        get() {
+            if (_couponRepository == null) {
+                _couponRepository =
+                        CouponRepository(database.couponDao(), database.couponHistoryDao())
+            }
+            return _couponRepository!!
+        }
+
+    fun resetDependencies() {
+        AppDatabase.enableAccess()
+        _database = null
+        _couponRepository = null
+    }
 }

@@ -1,10 +1,13 @@
 package com.nimroddayan.couponmanager.ui.screen
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -440,9 +443,15 @@ fun SpendingByMonth(spendingByMonth: List<MonthlySpending>) {
 
                         SpendingByMonthChart(data = chartData)
 
-                        if (expanded) {
-                                Spacer(modifier = Modifier.height(24.dp))
-                                MonthlySpendingTable(data = spendingByMonth.reversed())
+                        AnimatedVisibility(
+                                visible = expanded,
+                                enter = expandVertically() + fadeIn(),
+                                exit = shrinkVertically() + fadeOut()
+                        ) {
+                                Column {
+                                        Spacer(modifier = Modifier.height(24.dp))
+                                        MonthlySpendingTable(data = spendingByMonth.reversed())
+                                }
                         }
                 }
         }

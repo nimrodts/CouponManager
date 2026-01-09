@@ -6,14 +6,18 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Cloud
@@ -21,6 +25,7 @@ import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
@@ -59,6 +64,7 @@ fun DatabaseSettingsScreen(
         onResetDatabase: () -> Unit,
 ) {
         var showResetConfirmationDialog by remember { mutableStateOf(false) }
+        var showRestoreConfirmationDialog by remember { mutableStateOf(false) } // New confirmation
         var showImportSuccessDialog by remember { mutableStateOf(false) }
         val context = LocalContext.current
         val databaseManager = remember { DatabaseManager(context) }
@@ -66,9 +72,26 @@ fun DatabaseSettingsScreen(
         val scope = rememberCoroutineScope()
         val googleDriveManager = remember { GoogleDriveManager(context) }
         var signedInAccount by remember { mutableStateOf<GoogleSignInAccount?>(null) }
+        var lastBackupTime by remember { mutableStateOf<Long?>(null) } // Store last backup time
         var isBackupLoading by remember { mutableStateOf(false) }
         var isRestoreLoading by remember { mutableStateOf(false) }
+        var showSignOutConfirmationDialog by remember { mutableStateOf(false) }
         var statusMessage by remember { mutableStateOf<String?>(null) }
+
+        // Formatting date
+        val dateFormat = remember { java.text.SimpleDateFormat.getDateTimeInstance() }
+
+        // Fetch metadata when account key changes
+        LaunchedEffect(signedInAccount) {
+                if (signedInAccount != null) {
+                        try {
+                                lastBackupTime =
+                                        googleDriveManager.getBackupMetadata(signedInAccount!!)
+                        } catch (e: Exception) {
+                                e.printStackTrace()
+                        }
+                }
+        }
 
         val signInLauncher =
                 rememberLauncherForActivityResult(
@@ -168,21 +191,131 @@ fun DatabaseSettingsScreen(
                                                                 }
                                                         )
                                                 } else {
-                                                        Text(
-                                                                text =
-                                                                        "Connected as: ${signedInAccount?.email}",
-                                                                style =
-                                                                        MaterialTheme.typography
-                                                                                .bodyMedium,
-                                                                modifier =
-                                                                        Modifier.padding(
-                                                                                bottom = 16.dp
-                                                                        )
-                                                        )
-
                                                         Row(
                                                                 verticalAlignment =
                                                                         Alignment.CenterVertically
+                                                        ) {
+                                                                Icon(
+                                                                        imageVector =
+                                                                                Icons.Default
+                                                                                        .AccountCircle,
+                                                                        contentDescription = null,
+                                                                        tint =
+                                                                                MaterialTheme
+                                                                                        .colorScheme
+                                                                                        .primary,
+                                                                        modifier =
+                                                                                Modifier.padding(
+                                                                                        end = 8.dp
+                                                                                )
+                                                                )
+                                                                Column(
+                                                                        modifier =
+                                                                                Modifier.weight(1f)
+                                                                ) {
+                                                                        Text(
+                                                                                text =
+                                                                                        signedInAccount
+                                                                                                ?.email
+                                                                                                ?: "Unknown Account",
+                                                                                style =
+                                                                                        MaterialTheme
+                                                                                                .typography
+                                                                                                .bodyLarge,
+                                                                                fontWeight =
+                                                                                        androidx.compose
+                                                                                                .ui
+                                                                                                .text
+                                                                                                .font
+                                                                                                .FontWeight
+                                                                                                .Medium
+                                                                        )
+                                                                        Text(
+                                                                                text =
+                                                                                        "Google Drive Connected",
+                                                                                style =
+                                                                                        MaterialTheme
+                                                                                                .typography
+                                                                                                .bodySmall,
+                                                                                color =
+                                                                                        MaterialTheme
+                                                                                                .colorScheme
+                                                                                                .onSurfaceVariant
+                                                                        )
+                                                                }
+                                                                IconButton(
+                                                                        onClick = {
+                                                                                showSignOutConfirmationDialog =
+                                                                                        true
+                                                                        }
+                                                                ) {
+                                                                        Icon(
+                                                                                imageVector =
+                                                                                        Icons.AutoMirrored
+                                                                                                .Filled
+                                                                                                .ExitToApp,
+                                                                                contentDescription =
+                                                                                        "Sign Out",
+                                                                                tint =
+                                                                                        MaterialTheme
+                                                                                                .colorScheme
+                                                                                                .error
+                                                                        )
+                                                                }
+                                                        }
+
+                                                        HorizontalDivider(
+                                                                modifier =
+                                                                        Modifier.padding(
+                                                                                vertical = 12.dp
+                                                                        )
+                                                        )
+
+                                                        // Status Display
+                                                        if (lastBackupTime != null) {
+                                                                Text(
+                                                                        text =
+                                                                                "Last Backup: ${dateFormat.format(java.util.Date(lastBackupTime!!))}",
+                                                                        style =
+                                                                                MaterialTheme
+                                                                                        .typography
+                                                                                        .bodyMedium,
+                                                                        color =
+                                                                                MaterialTheme
+                                                                                        .colorScheme
+                                                                                        .primary,
+                                                                        modifier =
+                                                                                Modifier.padding(
+                                                                                        bottom =
+                                                                                                12.dp
+                                                                                )
+                                                                )
+                                                        } else {
+                                                                Text(
+                                                                        text =
+                                                                                "No backup found in Drive.",
+                                                                        style =
+                                                                                MaterialTheme
+                                                                                        .typography
+                                                                                        .bodyMedium,
+                                                                        color =
+                                                                                MaterialTheme
+                                                                                        .colorScheme
+                                                                                        .secondary,
+                                                                        modifier =
+                                                                                Modifier.padding(
+                                                                                        bottom =
+                                                                                                12.dp
+                                                                                )
+                                                                )
+                                                        }
+
+                                                        Row(
+                                                                verticalAlignment =
+                                                                        Alignment.CenterVertically,
+                                                                horizontalArrangement =
+                                                                        Arrangement.spacedBy(8.dp),
+                                                                modifier = Modifier.fillMaxWidth()
                                                         ) {
                                                                 Button(
                                                                         onClick = {
@@ -190,14 +323,18 @@ fun DatabaseSettingsScreen(
                                                                                         isBackupLoading =
                                                                                                 true
                                                                                         try {
-                                                                                                databaseManager
-                                                                                                        .checkpoint()
                                                                                                 googleDriveManager
                                                                                                         .uploadBackup(
                                                                                                                 signedInAccount!!
                                                                                                         )
                                                                                                 statusMessage =
                                                                                                         "Backup successful"
+                                                                                                // Refresh metadata
+                                                                                                lastBackupTime =
+                                                                                                        googleDriveManager
+                                                                                                                .getBackupMetadata(
+                                                                                                                        signedInAccount!!
+                                                                                                                )
                                                                                         } catch (
                                                                                                 e:
                                                                                                         Exception) {
@@ -212,17 +349,18 @@ fun DatabaseSettingsScreen(
                                                                         },
                                                                         enabled = !isBackupLoading,
                                                                         modifier =
-                                                                                Modifier.padding(
-                                                                                        end = 8.dp
-                                                                                )
+                                                                                Modifier.weight(1f)
                                                                 ) {
                                                                         if (isBackupLoading) {
                                                                                 CircularProgressIndicator(
                                                                                         modifier =
                                                                                                 Modifier.padding(
-                                                                                                        end =
-                                                                                                                8.dp
-                                                                                                ),
+                                                                                                                end =
+                                                                                                                        8.dp
+                                                                                                        )
+                                                                                                        .size(
+                                                                                                                16.dp
+                                                                                                        ),
                                                                                         color =
                                                                                                 MaterialTheme
                                                                                                         .colorScheme
@@ -235,7 +373,12 @@ fun DatabaseSettingsScreen(
                                                                                         Icons.Filled
                                                                                                 .CloudUpload,
                                                                                         contentDescription =
-                                                                                                null
+                                                                                                null,
+                                                                                        modifier =
+                                                                                                Modifier.padding(
+                                                                                                        end =
+                                                                                                                8.dp
+                                                                                                )
                                                                                 )
                                                                         }
                                                                         Text("Backup")
@@ -243,58 +386,35 @@ fun DatabaseSettingsScreen(
 
                                                                 Button(
                                                                         onClick = {
-                                                                                scope.launch {
-                                                                                        isRestoreLoading =
-                                                                                                true
-                                                                                        try {
-                                                                                                if (googleDriveManager
-                                                                                                                .restoreBackup(
-                                                                                                                        signedInAccount!!
-                                                                                                                )
-                                                                                                ) {
-                                                                                                        val tempFile =
-                                                                                                                googleDriveManager
-                                                                                                                        .getTempRestoreFile()
-                                                                                                        if (databaseManager
-                                                                                                                        .replaceDatabase(
-                                                                                                                                tempFile
-                                                                                                                        )
-                                                                                                        ) {
-                                                                                                                showImportSuccessDialog =
-                                                                                                                        true
-                                                                                                        } else {
-                                                                                                                statusMessage =
-                                                                                                                        "Database replacement failed"
-                                                                                                        }
-                                                                                                } else {
-                                                                                                        statusMessage =
-                                                                                                                "No backup found in Drive"
-                                                                                                }
-                                                                                        } catch (
-                                                                                                e:
-                                                                                                        Exception) {
-                                                                                                e.printStackTrace()
-                                                                                                statusMessage =
-                                                                                                        "Restore failed: ${e.message}"
-                                                                                        } finally {
-                                                                                                isRestoreLoading =
-                                                                                                        false
-                                                                                        }
-                                                                                }
+                                                                                showRestoreConfirmationDialog =
+                                                                                        true
                                                                         },
-                                                                        enabled = !isRestoreLoading
+                                                                        enabled = !isRestoreLoading,
+                                                                        colors =
+                                                                                ButtonDefaults
+                                                                                        .buttonColors(
+                                                                                                containerColor =
+                                                                                                        MaterialTheme
+                                                                                                                .colorScheme
+                                                                                                                .secondary
+                                                                                        ),
+                                                                        modifier =
+                                                                                Modifier.weight(1f)
                                                                 ) {
                                                                         if (isRestoreLoading) {
                                                                                 CircularProgressIndicator(
                                                                                         modifier =
                                                                                                 Modifier.padding(
-                                                                                                        end =
-                                                                                                                8.dp
-                                                                                                ),
+                                                                                                                end =
+                                                                                                                        8.dp
+                                                                                                        )
+                                                                                                        .size(
+                                                                                                                16.dp
+                                                                                                        ),
                                                                                         color =
                                                                                                 MaterialTheme
                                                                                                         .colorScheme
-                                                                                                        .onPrimary,
+                                                                                                        .onSecondary,
                                                                                         strokeWidth =
                                                                                                 2.dp
                                                                                 )
@@ -303,32 +423,17 @@ fun DatabaseSettingsScreen(
                                                                                         Icons.Filled
                                                                                                 .CloudDownload,
                                                                                         contentDescription =
-                                                                                                null
+                                                                                                null,
+                                                                                        modifier =
+                                                                                                Modifier.padding(
+                                                                                                        end =
+                                                                                                                8.dp
+                                                                                                )
                                                                                 )
                                                                         }
                                                                         Text("Restore")
                                                                 }
                                                         }
-
-                                                        Text(
-                                                                text = "Sign Out",
-                                                                color =
-                                                                        MaterialTheme.colorScheme
-                                                                                .error,
-                                                                modifier =
-                                                                        Modifier.clickable {
-                                                                                        googleDriveManager
-                                                                                                .getSignInClient()
-                                                                                                .signOut()
-                                                                                                .addOnCompleteListener {
-                                                                                                        signedInAccount =
-                                                                                                                null
-                                                                                                }
-                                                                                }
-                                                                                .padding(
-                                                                                        top = 16.dp
-                                                                                )
-                                                        )
                                                 }
 
                                                 if (statusMessage != null) {
@@ -412,13 +517,69 @@ fun DatabaseSettingsScreen(
                 )
         }
 
+        if (showRestoreConfirmationDialog) {
+                ConfirmationDialog(
+                        onConfirm = {
+                                showRestoreConfirmationDialog = false
+                                scope.launch {
+                                        isRestoreLoading = true
+                                        try {
+                                                if (googleDriveManager.restoreBackup(
+                                                                signedInAccount!!
+                                                        )
+                                                ) {
+                                                        val tempFile =
+                                                                googleDriveManager
+                                                                        .getTempRestoreFile()
+                                                        if (databaseManager.replaceDatabase(
+                                                                        tempFile
+                                                                )
+                                                        ) {
+                                                                showImportSuccessDialog = true
+                                                        } else {
+                                                                statusMessage =
+                                                                        "Database replacement failed"
+                                                        }
+                                                } else {
+                                                        statusMessage = "No backup found in Drive"
+                                                }
+                                        } catch (e: Exception) {
+                                                e.printStackTrace()
+                                                statusMessage = "Restore failed: ${e.message}"
+                                        } finally {
+                                                isRestoreLoading = false
+                                        }
+                                }
+                        },
+                        onDismiss = { showRestoreConfirmationDialog = false },
+                        title = "Restore Backup?",
+                        message =
+                                "This will overwrite your current data with the version from Google Drive. This action cannot be undone."
+                )
+        }
+
+        if (showSignOutConfirmationDialog) {
+                ConfirmationDialog(
+                        onConfirm = {
+                                showSignOutConfirmationDialog = false
+                                googleDriveManager
+                                        .getSignInClient()
+                                        .signOut()
+                                        .addOnCompleteListener { signedInAccount = null }
+                        },
+                        onDismiss = { showSignOutConfirmationDialog = false },
+                        title = "Sign Out",
+                        message = "Are you sure you want to disconnect your Google Drive account?"
+                )
+        }
+
         if (showImportSuccessDialog) {
                 ConfirmationDialog(
                         onConfirm = { restartApp(context) },
                         onDismiss = { restartApp(context) },
-                        title = "Import Successful",
+                        title = "Success",
                         message =
-                                "The database has been imported successfully. The app will now restart."
+                                "The database has been successfully updated. The app will now reload."
                 )
         }
 }
@@ -426,10 +587,13 @@ fun DatabaseSettingsScreen(
 private fun restartApp(context: Context) {
         val packageManager = context.packageManager
         val intent = packageManager.getLaunchIntentForPackage(context.packageName)
-        val componentName = intent?.component
-        val mainIntent = Intent.makeRestartActivityTask(componentName)
-        context.startActivity(mainIntent)
-        Runtime.getRuntime().exit(0)
+        if (intent != null) {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                intent.putExtra("destination", "database_settings")
+                context.startActivity(intent)
+                // Kill the process to ensure a clean reload of the database/Room
+                Runtime.getRuntime().exit(0)
+        }
 }
 
 @Composable
