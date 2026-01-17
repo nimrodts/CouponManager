@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.nimroddayan.couponmanager"
+    namespace = "com.nimroddayan.clipit"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.nimroddayan.couponmanager"
+        applicationId = "com.nimroddayan.clipit"
         minSdk = 26
         targetSdk = 34
         versionCode = 1

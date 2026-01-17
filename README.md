@@ -1,6 +1,6 @@
-# CouponManager
+# ClipIt
 
-CouponManager is a smart Android application designed to organize, track, and redeem detailed digital coupons and gift cards. Built with privacy and ease of use in use, it offers a complete solution for managing coupon expiry, remaining balances, and redemption history.
+ClipIt is a smart Android application designed to organize, track, and redeem detailed digital coupons and gift cards. Built with privacy and ease of use in use, it offers a complete solution for managing coupon expiry, remaining balances, and redemption history.
 
 ## Key Features
 

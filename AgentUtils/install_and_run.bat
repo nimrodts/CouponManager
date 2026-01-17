@@ -8,4 +8,4 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 echo Build successful. Launching app...
-adb shell am start -n com.nimroddayan.couponmanager/com.nimroddayan.couponmanager.MainActivity
+adb shell am start -n com.nimroddayan.clipit/com.nimroddayan.clipit.MainActivity

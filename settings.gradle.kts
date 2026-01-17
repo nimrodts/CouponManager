@@ -22,6 +22,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "CouponManager"
+rootProject.name = "ClipIt"
 include(":app")
  

@@ -1,4 +1,4 @@
-$package = "com.nimroddayan.couponmanager"
+$package = "com.nimroddayan.clipit"
 
 Write-Host "------------------------------------------------" -ForegroundColor Cyan
 Write-Host "  Auto-Logcat Monitor for $package" -ForegroundColor Cyan
