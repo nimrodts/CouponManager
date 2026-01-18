@@ -49,7 +49,7 @@ The app maintains an immutable timeline of every action performed on a coupon, s
 
 1.  **Clone the repository**:
     ```bash
-    git clone https://github.com/Start-05/CouponManager.git
+    git clone https://github.com/nimrodts/ClipIt.git
     ```
 2.  **Open in Android Studio**:
     Open the project in the latest version of Android Studio Koala or later.

@@ -2,6 +2,7 @@
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nimroddayan.clipit.data.UserPreferencesRepository
 import com.nimroddayan.clipit.data.gemini.GeminiApiKeyRepository
 import com.nimroddayan.clipit.data.gemini.GeminiModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -9,46 +10,54 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class SettingsViewModel(private val geminiApiKeyRepository: GeminiApiKeyRepository) : ViewModel() {
+class SettingsViewModel(
+        private val geminiApiKeyRepository: GeminiApiKeyRepository,
+        private val userPreferencesRepository: UserPreferencesRepository
+) : ViewModel() {
 
-    val geminiApiKey: StateFlow<String> = geminiApiKeyRepository.getApiKey
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = ""
-        )
+        val selectedCurrency: StateFlow<String> =
+                userPreferencesRepository.selectedCurrency.stateIn(
+                        scope = viewModelScope,
+                        started = SharingStarted.WhileSubscribed(5000),
+                        initialValue = "ILS"
+                )
 
-    val geminiModel: StateFlow<GeminiModel> = geminiApiKeyRepository.getModel
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = GeminiModel.GEMINI_FLASH_LATEST
-        )
+        val geminiApiKey: StateFlow<String> =
+                geminiApiKeyRepository.getApiKey.stateIn(
+                        scope = viewModelScope,
+                        started = SharingStarted.WhileSubscribed(5000),
+                        initialValue = ""
+                )
 
-    val geminiTemperature: StateFlow<Float> = geminiApiKeyRepository.getTemperature
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = 0.15f
-        )
+        val geminiModel: StateFlow<GeminiModel> =
+                geminiApiKeyRepository.getModel.stateIn(
+                        scope = viewModelScope,
+                        started = SharingStarted.WhileSubscribed(5000),
+                        initialValue = GeminiModel.GEMINI_FLASH_LATEST
+                )
 
-    fun saveGeminiApiKey(apiKey: String) {
-        viewModelScope.launch {
-            geminiApiKeyRepository.saveApiKey(apiKey)
+        val geminiTemperature: StateFlow<Float> =
+                geminiApiKeyRepository.getTemperature.stateIn(
+                        scope = viewModelScope,
+                        started = SharingStarted.WhileSubscribed(5000),
+                        initialValue = 0.15f
+                )
+
+        suspend fun saveGeminiApiKey(apiKey: String) {
+                geminiApiKeyRepository.saveApiKey(apiKey)
         }
-    }
 
-    fun saveGeminiModel(model: GeminiModel) {
-        viewModelScope.launch {
-            geminiApiKeyRepository.saveModel(model)
+        suspend fun saveGeminiModel(model: GeminiModel) {
+                geminiApiKeyRepository.saveModel(model)
         }
-    }
 
-    fun saveGeminiTemperature(temperature: Float) {
-        viewModelScope.launch {
-            geminiApiKeyRepository.saveTemperature(temperature)
+        suspend fun saveGeminiTemperature(temperature: Float) {
+                geminiApiKeyRepository.saveTemperature(temperature)
         }
-    }
+
+        fun saveSelectedCurrency(currencyCode: String) {
+                viewModelScope.launch {
+                        userPreferencesRepository.saveSelectedCurrency(currencyCode)
+                }
+        }
 }
-
-

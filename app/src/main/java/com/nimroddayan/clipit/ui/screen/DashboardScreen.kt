@@ -70,6 +70,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
         val totalSpent by viewModel.totalSpent.collectAsState()
         val spendingByCategory by viewModel.spendingByCategory.collectAsState()
         val spendingByMonth by viewModel.spendingByMonth.collectAsState()
+        val currencySymbol by viewModel.currencySymbol.collectAsState()
 
         var selectedTab by remember { mutableStateOf(0) }
         val scrollState = rememberScrollState()
@@ -100,7 +101,8 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                 title = "Balance",
                                 value = totalBalance,
                                 icon = Icons.Default.AccountBalanceWallet,
-                                color = MaterialTheme.colorScheme.primary
+                                color = MaterialTheme.colorScheme.primary,
+                                currencySymbol = currencySymbol
                         )
                         MetricCard(
                                 modifier = Modifier.weight(1f),
@@ -109,10 +111,11 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                 icon = Icons.Default.ShoppingCart,
                                 color =
                                         MaterialTheme.colorScheme
-                                                .error // Using error color for spending usually
+                                                .error, // Using error color for spending usually
                                 // looks good, or
                                 // Secondary
-                                )
+                                currencySymbol = currencySymbol
+                        )
                 }
 
                 // Custom Segmented Control for Tabs with Sliding Indicator
@@ -236,7 +239,9 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                                                                 )
                                                                 )
                                                                 DonutChart(
-                                                                        data = spendingByCategory
+                                                                        data = spendingByCategory,
+                                                                        currencySymbol =
+                                                                                currencySymbol
                                                                 )
                                                         }
                                                 }
@@ -244,7 +249,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                 }
                                 1 -> {
                                         if (spendingByMonth.isNotEmpty()) {
-                                                SpendingByMonth(spendingByMonth)
+                                                SpendingByMonth(spendingByMonth, currencySymbol)
                                         }
                                 }
                         }
@@ -258,7 +263,8 @@ fun MetricCard(
         title: String,
         value: Double,
         icon: ImageVector,
-        color: Color
+        color: Color,
+        currencySymbol: String
 ) {
         ElevatedCard(
                 modifier = modifier,
@@ -292,7 +298,7 @@ fun MetricCard(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                        text = "ג‚×%.2f".format(value),
+                                        text = "$currencySymbol%.2f".format(value),
                                         style = MaterialTheme.typography.titleLarge
                                 )
                         }
@@ -301,7 +307,10 @@ fun MetricCard(
 }
 
 @Composable
-fun DonutChart(data: List<com.nimroddayan.clipit.data.model.CategorySpending>) {
+fun DonutChart(
+        data: List<com.nimroddayan.clipit.data.model.CategorySpending>,
+        currencySymbol: String
+) {
         val total = data.sumOf { it.totalSpent }
         val proportions = data.map { it.totalSpent / total }
 
@@ -347,7 +356,7 @@ fun DonutChart(data: List<com.nimroddayan.clipit.data.model.CategorySpending>) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("Total", style = MaterialTheme.typography.labelMedium)
                                 Text(
-                                        "ג‚×%.0f".format(total),
+                                        "$currencySymbol%.0f".format(total),
                                         style = MaterialTheme.typography.titleLarge
                                 )
                         }
@@ -388,7 +397,10 @@ fun DonutChart(data: List<com.nimroddayan.clipit.data.model.CategorySpending>) {
                                                 modifier = Modifier.weight(1f)
                                         )
                                         Text(
-                                                text = "ג‚×%.2f".format(categorySpending.totalSpent),
+                                                text =
+                                                        "$currencySymbol%.2f".format(
+                                                                categorySpending.totalSpent
+                                                        ),
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -407,7 +419,7 @@ fun DonutChart(data: List<com.nimroddayan.clipit.data.model.CategorySpending>) {
 }
 
 @Composable
-fun SpendingByMonth(spendingByMonth: List<MonthlySpending>) {
+fun SpendingByMonth(spendingByMonth: List<MonthlySpending>, currencySymbol: String) {
         var expanded by remember { mutableStateOf(false) }
         val chartData = if (expanded) spendingByMonth else spendingByMonth.takeLast(6)
 
@@ -441,7 +453,7 @@ fun SpendingByMonth(spendingByMonth: List<MonthlySpending>) {
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        SpendingByMonthChart(data = chartData)
+                        SpendingByMonthChart(data = chartData, currencySymbol = currencySymbol)
 
                         AnimatedVisibility(
                                 visible = expanded,
@@ -450,7 +462,10 @@ fun SpendingByMonth(spendingByMonth: List<MonthlySpending>) {
                         ) {
                                 Column {
                                         Spacer(modifier = Modifier.height(24.dp))
-                                        MonthlySpendingTable(data = spendingByMonth.reversed())
+                                        MonthlySpendingTable(
+                                                data = spendingByMonth.reversed(),
+                                                currencySymbol = currencySymbol
+                                        )
                                 }
                         }
                 }
@@ -458,7 +473,7 @@ fun SpendingByMonth(spendingByMonth: List<MonthlySpending>) {
 }
 
 @Composable
-fun SpendingByMonthChart(data: List<MonthlySpending>) {
+fun SpendingByMonthChart(data: List<MonthlySpending>, currencySymbol: String) {
         val maxValue = data.maxOfOrNull { it.totalSpent } ?: 0.0
         val primaryColor = MaterialTheme.colorScheme.primary
         val secondaryColor = MaterialTheme.colorScheme.secondary
@@ -541,7 +556,8 @@ fun SpendingByMonthChart(data: List<MonthlySpending>) {
                                 )
 
                                 // Draw value label above the bar
-                                val valueText = "ג‚×${monthlySpending.totalSpent.toInt()}"
+                                val valueText =
+                                        "$currencySymbol${monthlySpending.totalSpent.toInt()}"
                                 val valueLayoutResult =
                                         textMeasurer.measure(
                                                 AnnotatedString(valueText),
@@ -571,7 +587,7 @@ fun SpendingByMonthChart(data: List<MonthlySpending>) {
 }
 
 @Composable
-fun MonthlySpendingTable(data: List<MonthlySpending>) {
+fun MonthlySpendingTable(data: List<MonthlySpending>, currencySymbol: String) {
         Card(
                 elevation = CardDefaults.cardElevation(2.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -600,7 +616,7 @@ fun MonthlySpendingTable(data: List<MonthlySpending>) {
                                 ) {
                                         Text(it.month, style = MaterialTheme.typography.bodyLarge)
                                         Text(
-                                                "ג‚×%.2f".format(it.totalSpent),
+                                                "$currencySymbol%.2f".format(it.totalSpent),
                                                 style = MaterialTheme.typography.bodyLarge,
                                                 color = MaterialTheme.colorScheme.onSurface
                                         )
@@ -617,5 +633,3 @@ fun MonthlySpendingTable(data: List<MonthlySpending>) {
                 }
         }
 }
-
-

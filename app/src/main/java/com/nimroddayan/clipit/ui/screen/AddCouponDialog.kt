@@ -330,7 +330,7 @@ fun AddCouponDialog(
                             },
                             modifier = Modifier.fillMaxWidth(),
                             enabled = !isLoading
-                    ) { Text("ג¨ Auto-fill from Clipboard") }
+                    ) { Text("✨ Auto-fill from Clipboard") }
                 }
                 if (isLoading) {
                     SparkleAnimation(modifier = Modifier.matchParentSize())
@@ -339,5 +339,3 @@ fun AddCouponDialog(
         }
     }
 }
-
-

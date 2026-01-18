@@ -25,10 +25,9 @@ class ViewModelFactory(
                     T
         }
         if (modelClass.isAssignableFrom(SettingsViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST") return SettingsViewModel(geminiApiKeyRepository) as T
+            @Suppress("UNCHECKED_CAST")
+            return SettingsViewModel(geminiApiKeyRepository, userPreferencesRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
-
-

@@ -50,7 +50,7 @@ class GoogleDriveManager(private val context: Context) {
                                     GsonFactory.getDefaultInstance(),
                                     credential
                             )
-                            .setApplicationName("ClipIt
+                            .setApplicationName("ClipIt")
                             .build()
 
             // 2. Prepare Database Backup
@@ -106,7 +106,7 @@ class GoogleDriveManager(private val context: Context) {
                                     GsonFactory.getDefaultInstance(),
                                     credential
                             )
-                            .setApplicationName("ClipIt
+                            .setApplicationName("ClipIt")
                             .build()
 
             // 2. Find Backup
@@ -155,7 +155,7 @@ class GoogleDriveManager(private val context: Context) {
                                     GsonFactory.getDefaultInstance(),
                                     credential
                             )
-                            .setApplicationName("ClipIt
+                            .setApplicationName("ClipIt")
                             .build()
 
             val fileList =

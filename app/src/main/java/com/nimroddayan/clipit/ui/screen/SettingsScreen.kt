@@ -12,120 +12,156 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.nimroddayan.clipit.ui.viewmodel.SettingsViewModel
 
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
-
 @Composable
 fun SettingsScreen(
-    viewModel: SettingsViewModel,
-    isDarkTheme: Boolean,
-    onThemeChange: (Boolean) -> Unit,
-    onManageCategories: () -> Unit,
-    onNavigateToArchive: () -> Unit,
-    onNavigateToAiSettings: () -> Unit,
-    onNavigateToDatabaseSettings: () -> Unit,
+        viewModel: SettingsViewModel,
+        isDarkTheme: Boolean,
+        onThemeChange: (Boolean) -> Unit,
+        onManageCategories: () -> Unit,
+        onNavigateToArchive: () -> Unit,
+        onNavigateToAiSettings: () -> Unit,
+        onNavigateToDatabaseSettings: () -> Unit,
 ) {
+    var showCurrencyDialog by remember { mutableStateOf(false) }
+
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp)
+            modifier =
+                    Modifier.fillMaxSize()
+                            .background(MaterialTheme.colorScheme.background)
+                            .padding(16.dp)
     ) {
         Spacer(modifier = Modifier.height(16.dp))
-        Text("General Settings", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 16.dp))
-        
+        Text(
+                "General Settings",
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(bottom = 16.dp)
+        )
+
         ElevatedCard(
-            elevation = CardDefaults.elevatedCardElevation(2.dp),
-            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+                elevation = CardDefaults.elevatedCardElevation(2.dp),
+                colors =
+                        CardDefaults.elevatedCardColors(
+                                containerColor = MaterialTheme.colorScheme.surface
+                        )
         ) {
             Column {
                 SettingsItem(
-                    icon = Icons.Filled.DarkMode,
-                    title = "Dark Mode",
-                    onClick = { onThemeChange(!isDarkTheme) }
-                ) {
-                    Switch(
-                        checked = isDarkTheme,
-                        onCheckedChange = onThemeChange
-                    )
-                }
-                HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                SettingsItem(
-                    icon = Icons.Filled.Category,
-                    title = "Manage Categories",
-                    onClick = onManageCategories
+                        icon = Icons.Filled.DarkMode,
+                        title = "Dark Mode",
+                        onClick = { onThemeChange(!isDarkTheme) }
+                ) { Switch(checked = isDarkTheme, onCheckedChange = onThemeChange) }
+                HorizontalDivider(
+                        modifier = Modifier.padding(start = 56.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                 )
-                HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 SettingsItem(
-                    icon = Icons.Filled.Archive,
-                    title = "Archived Coupons",
-                    onClick = onNavigateToArchive
+                        icon = Icons.Filled.AttachMoney,
+                        title = "Currency",
+                        onClick = { showCurrencyDialog = true }
                 )
-                HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                SettingsItem(
-                    icon = Icons.Filled.SmartToy,
-                    title = "AI Settings",
-                    onClick = onNavigateToAiSettings
+                HorizontalDivider(
+                        modifier = Modifier.padding(start = 56.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                 )
-                HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 SettingsItem(
-                    icon = Icons.Filled.Dns,
-                    title = "Database",
-                    onClick = onNavigateToDatabaseSettings
+                        icon = Icons.Filled.Category,
+                        title = "Manage Categories",
+                        onClick = onManageCategories
+                )
+                HorizontalDivider(
+                        modifier = Modifier.padding(start = 56.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+                SettingsItem(
+                        icon = Icons.Filled.Archive,
+                        title = "Archived Coupons",
+                        onClick = onNavigateToArchive
+                )
+                HorizontalDivider(
+                        modifier = Modifier.padding(start = 56.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+                SettingsItem(
+                        icon = Icons.Filled.SmartToy,
+                        title = "AI Settings",
+                        onClick = onNavigateToAiSettings
+                )
+                HorizontalDivider(
+                        modifier = Modifier.padding(start = 56.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+                SettingsItem(
+                        icon = Icons.Filled.Dns,
+                        title = "Database",
+                        onClick = onNavigateToDatabaseSettings
                 )
             }
         }
+    }
+
+    if (showCurrencyDialog) {
+        val currentCurrency by viewModel.selectedCurrency.collectAsState()
+        CurrencySelectionDialog(
+                currentCurrencyCode = currentCurrency,
+                onCurrencySelected = { viewModel.saveSelectedCurrency(it.code) },
+                onDismiss = { showCurrencyDialog = false }
+        )
     }
 }
 
 @Composable
 private fun SettingsItem(
-    icon: ImageVector,
-    title: String,
-    onClick: () -> Unit,
-    content: @Composable (() -> Unit)? = null
+        icon: ImageVector,
+        title: String,
+        onClick: () -> Unit,
+        content: @Composable (() -> Unit)? = null
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(imageVector = icon, contentDescription = title, tint = MaterialTheme.colorScheme.onSurface)
+        Icon(
+                imageVector = icon,
+                contentDescription = title,
+                tint = MaterialTheme.colorScheme.onSurface
+        )
         Text(
-            text = title,
-            modifier = Modifier
-                .padding(start = 16.dp)
-                .weight(1f),
-            color = MaterialTheme.colorScheme.onSurface
+                text = title,
+                modifier = Modifier.padding(start = 16.dp).weight(1f),
+                color = MaterialTheme.colorScheme.onSurface
         )
         if (content == null) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
             )
         } else {
             content()
         }
     }
 }
-
-

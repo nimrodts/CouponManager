@@ -44,6 +44,18 @@ class CouponViewModel(
         viewModelScope.launch { userPreferencesRepository.saveSortOption(option.name) }
     }
 
+    val currencySymbol: StateFlow<String> =
+            userPreferencesRepository
+                    .selectedCurrency
+                    .map { code ->
+                        com.nimroddayan.clipit.data.model.Currency.fromCode(code).symbol
+                    }
+                    .stateIn(
+                            scope = viewModelScope,
+                            started = SharingStarted.WhileSubscribed(5000),
+                            initialValue = "₪"
+                    )
+
     val allCoupons = couponRepository.allCoupons
     val archivedCoupons = couponRepository.archivedCoupons
 
@@ -117,5 +129,3 @@ class CouponViewModel(
         _error.value = null
     }
 }
-
-

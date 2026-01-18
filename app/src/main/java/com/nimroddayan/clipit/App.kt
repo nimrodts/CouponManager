@@ -89,10 +89,7 @@ fun App(app: CouponApplication, startDestination: String? = null) {
         val context = LocalContext.current
         val themeViewModel: com.nimroddayan.clipit.ui.viewmodel.ThemeViewModel =
                 viewModel(
-                        factory =
-                                com.nimroddayan.clipit.ui.viewmodel.ThemeViewModelFactory(
-                                        context
-                                )
+                        factory = com.nimroddayan.clipit.ui.viewmodel.ThemeViewModelFactory(context)
                 )
         val isDarkTheme by themeViewModel.isDarkTheme.collectAsState()
         val databaseManager = remember { DatabaseManager(context) }
@@ -128,6 +125,7 @@ fun App(app: CouponApplication, startDestination: String? = null) {
                                 MainScaffold(
                                         app = app,
                                         viewModelFactory = viewModelFactory,
+                                        userPreferencesRepository = userPreferencesRepository,
                                         isDarkTheme = isDarkTheme,
                                         onThemeChange = { themeViewModel.setTheme(it) },
                                         onManageCategories = {
@@ -215,7 +213,8 @@ fun App(app: CouponApplication, startDestination: String? = null) {
                                 val historyViewModelFactory =
                                         HistoryViewModelFactory(
                                                 app.database.couponHistoryDao(),
-                                                app.couponRepository
+                                                app.couponRepository,
+                                                userPreferencesRepository
                                         )
                                 CouponHistoryScreen(
                                         couponId = couponId,
@@ -255,6 +254,7 @@ private fun restartApp(context: Context) {
 fun MainScaffold(
         app: CouponApplication,
         viewModelFactory: ViewModelFactory,
+        userPreferencesRepository: com.nimroddayan.clipit.data.UserPreferencesRepository,
         isDarkTheme: Boolean,
         onThemeChange: (Boolean) -> Unit,
         onManageCategories: () -> Unit,
@@ -268,7 +268,9 @@ fun MainScaffold(
         val categoryViewModel: CategoryViewModel =
                 viewModel(factory = CategoryViewModelFactory(app.database))
         val dashboardViewModel: DashboardViewModel =
-                viewModel(factory = DashboardViewModelFactory(app.database))
+                viewModel(
+                        factory = DashboardViewModelFactory(app.database, userPreferencesRepository)
+                )
 
         val coupons by couponViewModel.allCoupons.collectAsState(initial = emptyList())
         var showAddCouponDialog by remember { mutableStateOf(false) }
@@ -405,5 +407,3 @@ fun MainScaffold(
                 }
         }
 }
-
-

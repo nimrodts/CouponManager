@@ -55,6 +55,7 @@ fun CouponHistoryScreen(
     val viewModel: HistoryViewModel = viewModel(factory = viewModelFactory)
     viewModel.setCouponId(couponId)
     val history by viewModel.history.collectAsState()
+    val currencySymbol by viewModel.currencySymbol.collectAsState()
     var showUndoConfirmationDialog by remember { mutableStateOf<CouponHistory?>(null) }
 
     Scaffold(
@@ -68,6 +69,7 @@ fun CouponHistoryScreen(
             items(history) { operation ->
                 HistoryItem(
                         operation = operation,
+                        currencySymbol = currencySymbol,
                         onUndo = { showUndoConfirmationDialog = it },
                 )
             }
@@ -90,6 +92,7 @@ fun CouponHistoryScreen(
 @Composable
 fun HistoryItem(
         operation: CouponHistory,
+        currencySymbol: String,
         onUndo: (CouponHistory) -> Unit,
 ) {
     operation.couponState?.let { couponState ->
@@ -157,7 +160,7 @@ fun HistoryItem(
 
                     if (operation.action == "Coupon Used") {
                         Text(
-                                text = "Used: ג‚×${operation.changeSummary}",
+                                text = "Used: $currencySymbol${operation.changeSummary}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.SemiBold
@@ -195,5 +198,3 @@ fun HistoryItem(
         }
     }
 }
-
-

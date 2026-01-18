@@ -10,34 +10,43 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class HistoryViewModel(
-    private val couponHistoryDao: CouponHistoryDao,
-    private val couponRepository: CouponRepository,
+        private val couponHistoryDao: CouponHistoryDao,
+        private val couponRepository: CouponRepository,
+        private val userPreferencesRepository: com.nimroddayan.clipit.data.UserPreferencesRepository
 ) : ViewModel() {
+    val currencySymbol: StateFlow<String> =
+            userPreferencesRepository
+                    .selectedCurrency
+                    .map { code ->
+                        com.nimroddayan.clipit.data.model.Currency.fromCode(code).symbol
+                    }
+                    .stateIn(
+                            scope = viewModelScope,
+                            started = SharingStarted.WhileSubscribed(5000),
+                            initialValue = "₪"
+                    )
+
     private val couponId = MutableStateFlow(-1L)
 
     val history: StateFlow<List<CouponHistory>> =
-        couponId.flatMapLatest { couponId ->
-            couponHistoryDao.getHistoryForCoupon(couponId)
-        }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+            couponId
+                    .flatMapLatest { couponId -> couponHistoryDao.getHistoryForCoupon(couponId) }
+                    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun setCouponId(couponId: Long) {
         this.couponId.value = couponId
     }
 
     fun undo(operation: CouponHistory) {
-        viewModelScope.launch {
-            couponRepository.undo(operation)
-        }
+        viewModelScope.launch { couponRepository.undo(operation) }
     }
 
     suspend fun getCoupon(couponId: Long): Coupon? {
         return couponRepository.getCouponById(couponId)
     }
 }
-
-

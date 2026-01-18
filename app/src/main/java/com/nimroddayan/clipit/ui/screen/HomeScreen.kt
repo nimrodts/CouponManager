@@ -97,6 +97,7 @@ fun HomeScreen(
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategories by remember { mutableStateOf(emptySet<Category>()) }
     val sortOption by couponViewModel.sortOption.collectAsState()
+    val currencySymbol by couponViewModel.currencySymbol.collectAsState()
     var showSortMenu by remember { mutableStateOf(false) }
 
     val filteredCoupons =
@@ -286,6 +287,7 @@ fun HomeScreen(
                         CouponItem(
                                 coupon = coupon,
                                 category = category,
+                                currencySymbol = currencySymbol,
                                 onUseClick = {
                                     if (coupon.isOneTime) {
                                         showOneTimeRedeemDialog = coupon
@@ -311,6 +313,7 @@ fun HomeScreen(
     showUseCouponDialog?.let { coupon ->
         UseCouponDialog(
                 coupon = coupon,
+                currencySymbol = currencySymbol,
                 onConfirm = { amount ->
                     couponViewModel.use(coupon, amount)
                     showUseCouponDialog = null
@@ -380,6 +383,7 @@ fun HomeScreen(
 fun CouponItem(
         coupon: Coupon,
         category: Category?,
+        currencySymbol: String,
         onUseClick: () -> Unit,
         onEditClick: () -> Unit,
         onArchiveClick: () -> Unit,
@@ -486,13 +490,15 @@ fun CouponItem(
                 Column(horizontalAlignment = Alignment.End) {
                     if (!coupon.isOneTime) {
                         Text(
-                                text = "ג‚×${String.format("%.2f", coupon.currentValue)}",
+                                text =
+                                        "$currencySymbol${String.format("%.2f", coupon.currentValue)}",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                                text = "/ ג‚×${String.format("%.2f", coupon.initialValue)}",
+                                text =
+                                        "/ $currencySymbol${String.format("%.2f", coupon.initialValue)}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -604,5 +610,3 @@ fun CouponItem(
         }
     }
 }
-
-
