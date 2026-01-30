@@ -1,4 +1,4 @@
-﻿package com.nimroddayan.clipit.ui.viewmodel
+package com.nimroddayan.clipit.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -58,6 +58,15 @@ class CouponViewModel(
 
     val allCoupons = couponRepository.allCoupons
     val archivedCoupons = couponRepository.archivedCoupons
+    val pendingCoupons = couponRepository.pendingCoupons
+
+    fun approve(coupon: Coupon) {
+        viewModelScope.launch { couponRepository.approveCoupon(coupon) }
+    }
+
+    fun reject(coupon: Coupon) {
+        viewModelScope.launch { couponRepository.deletePendingCoupon(coupon) }
+    }
 
     private val _parsedCoupon = MutableStateFlow<ParsedCoupon?>(null)
     val parsedCoupon: StateFlow<ParsedCoupon?> = _parsedCoupon.asStateFlow()

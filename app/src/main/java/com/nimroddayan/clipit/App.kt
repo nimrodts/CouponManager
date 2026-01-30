@@ -82,6 +82,8 @@ sealed class Screen(val route: String, val icon: ImageVector, val title: String)
         object AiSettings : Screen("ai_settings", Icons.Filled.SmartToy, "AI Settings")
         object CouponHistory : Screen("coupon_history/{couponId}", Icons.Filled.Home, "History")
         object DatabaseSettings : Screen("database_settings", Icons.Filled.Dns, "Database")
+        object WhitelistManagement :
+                Screen("whitelist_management", Icons.Filled.SmartToy, "Whitelist")
 }
 
 @Composable
@@ -107,6 +109,23 @@ fun App(app: CouponApplication, startDestination: String? = null) {
 
         ClipItTheme(darkTheme = isDarkTheme) {
                 val navController = rememberNavController()
+
+                val permissions =
+                        mutableListOf(
+                                android.Manifest.permission.RECEIVE_SMS,
+                        )
+
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                        permissions.add(android.Manifest.permission.POST_NOTIFICATIONS)
+                }
+
+                val launcher =
+                        androidx.activity.compose.rememberLauncherForActivityResult(
+                                androidx.activity.result.contract.ActivityResultContracts
+                                        .RequestMultiplePermissions()
+                        ) { _ -> }
+
+                LaunchedEffect(Unit) { launcher.launch(permissions.toTypedArray()) }
 
                 LaunchedEffect(startDestination) {
                         if (startDestination == "database_settings") {
@@ -145,6 +164,11 @@ fun App(app: CouponApplication, startDestination: String? = null) {
                                         onNavigateToDatabaseSettings = {
                                                 navController.navigate(
                                                         Screen.DatabaseSettings.route
+                                                )
+                                        },
+                                        onManageWhitelist = {
+                                                navController.navigate(
+                                                        Screen.WhitelistManagement.route
                                                 )
                                         }
                                 )
@@ -194,6 +218,22 @@ fun App(app: CouponApplication, startDestination: String? = null) {
                                 val settingsViewModel: SettingsViewModel =
                                         viewModel(factory = viewModelFactory)
                                 AiSettingsScreen(
+                                        viewModel = settingsViewModel,
+                                        onNavigateUp = { navController.popBackStack() }
+                                )
+                        }
+                        composable(
+                                Screen.WhitelistManagement.route,
+                                enterTransition = { slideInHorizontally(initialOffsetX = { it }) },
+                                exitTransition = { slideOutHorizontally(targetOffsetX = { -it }) },
+                                popEnterTransition = {
+                                        slideInHorizontally(initialOffsetX = { -it })
+                                },
+                                popExitTransition = { slideOutHorizontally(targetOffsetX = { it }) }
+                        ) {
+                                val settingsViewModel: SettingsViewModel =
+                                        viewModel(factory = viewModelFactory)
+                                com.nimroddayan.clipit.ui.screen.WhitelistManagementScreen(
                                         viewModel = settingsViewModel,
                                         onNavigateUp = { navController.popBackStack() }
                                 )
@@ -262,6 +302,7 @@ fun MainScaffold(
         onNavigateToAiSettings: () -> Unit,
         onNavigateToHistory: (Long) -> Unit,
         onNavigateToDatabaseSettings: () -> Unit,
+        onManageWhitelist: () -> Unit,
 ) {
         val couponViewModel: CouponViewModel = viewModel(factory = viewModelFactory)
         val settingsViewModel: SettingsViewModel = viewModel(factory = viewModelFactory)
@@ -365,7 +406,8 @@ fun MainScaffold(
                                                         onNavigateToAiSettings =
                                                                 onNavigateToAiSettings,
                                                         onNavigateToDatabaseSettings =
-                                                                onNavigateToDatabaseSettings
+                                                                onNavigateToDatabaseSettings,
+                                                        onManageWhitelist = onManageWhitelist
                                                 )
                                         else -> {}
                                 }
@@ -381,6 +423,7 @@ fun MainScaffold(
                                                 expiration,
                                                 categoryId,
                                                 redeemCode,
+                                                redemptionUrl,
                                                 creationMessage,
                                                 isOneTime,
                                                 onSuccess ->
@@ -392,6 +435,7 @@ fun MainScaffold(
                                                                 expirationDate = expiration,
                                                                 categoryId = categoryId,
                                                                 redeemCode = redeemCode,
+                                                                redemptionUrl = redemptionUrl,
                                                                 creationMessage = creationMessage,
                                                                 isOneTime = isOneTime,
                                                         )

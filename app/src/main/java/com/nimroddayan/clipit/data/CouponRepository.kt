@@ -9,8 +9,8 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 class CouponRepository(
-    private val couponDao: CouponDao,
-    private val couponHistoryDao: CouponHistoryDao,
+        private val couponDao: CouponDao,
+        private val couponHistoryDao: CouponHistoryDao,
 ) {
     val allCoupons: Flow<List<Coupon>> = couponDao.getAll()
     val archivedCoupons: Flow<List<Coupon>> = couponDao.getArchived()
@@ -33,12 +33,14 @@ class CouponRepository(
         val ids = couponDao.insertAll(coupon)
         val id = ids.first()
         val couponState = Json.encodeToString(coupon.copy(id = id))
-        val history = CouponHistory(
-            couponId = id,
-            action = "Coupon Created",
-            changeSummary = "Coupon created with initial value of ${coupon.initialValue}",
-            couponState = couponState,
-        )
+        val history =
+                CouponHistory(
+                        couponId = id,
+                        action = "Coupon Created",
+                        changeSummary =
+                                "Coupon created with initial value of ${coupon.initialValue}",
+                        couponState = couponState,
+                )
         couponHistoryDao.insert(history)
     }
 
@@ -47,23 +49,25 @@ class CouponRepository(
         if (oldCoupon != null) {
             val changeSummary = generateChangeSummary(oldCoupon, coupon)
             val couponState = Json.encodeToString(oldCoupon)
-            val history = CouponHistory(
-                couponId = coupon.id,
-                action = "Coupon Edited",
-                changeSummary = changeSummary,
-                couponState = couponState,
-            )
+            val history =
+                    CouponHistory(
+                            couponId = coupon.id,
+                            action = "Coupon Edited",
+                            changeSummary = changeSummary,
+                            couponState = couponState,
+                    )
             couponHistoryDao.insert(history)
 
             // If the value was reduced, add a separate history entry for analytics
             if (oldCoupon.currentValue > coupon.currentValue) {
                 val amountSpent = oldCoupon.currentValue - coupon.currentValue
-                val useHistory = CouponHistory(
-                    couponId = coupon.id,
-                    action = "Coupon Used",
-                    changeSummary = amountSpent.toString(),
-                    couponState = couponState
-                )
+                val useHistory =
+                        CouponHistory(
+                                couponId = coupon.id,
+                                action = "Coupon Used",
+                                changeSummary = amountSpent.toString(),
+                                couponState = couponState
+                        )
                 couponHistoryDao.insert(useHistory)
             }
         }
@@ -76,12 +80,13 @@ class CouponRepository(
 
     suspend fun archive(coupon: Coupon) {
         val couponState = Json.encodeToString(coupon)
-        val history = CouponHistory(
-            couponId = coupon.id,
-            action = "Coupon Archived",
-            changeSummary = "Coupon has been archived",
-            couponState = couponState,
-        )
+        val history =
+                CouponHistory(
+                        couponId = coupon.id,
+                        action = "Coupon Archived",
+                        changeSummary = "Coupon has been archived",
+                        couponState = couponState,
+                )
         couponHistoryDao.insert(history)
         val updatedCoupon = coupon.copy(isArchived = true)
         couponDao.update(updatedCoupon)
@@ -89,12 +94,13 @@ class CouponRepository(
 
     suspend fun unarchive(coupon: Coupon) {
         val couponState = Json.encodeToString(coupon)
-        val history = CouponHistory(
-            couponId = coupon.id,
-            action = "Coupon Unarchived",
-            changeSummary = "Coupon has been unarchived",
-            couponState = couponState,
-        )
+        val history =
+                CouponHistory(
+                        couponId = coupon.id,
+                        action = "Coupon Unarchived",
+                        changeSummary = "Coupon has been unarchived",
+                        couponState = couponState,
+                )
         couponHistoryDao.insert(history)
         val updatedCoupon = coupon.copy(isArchived = false)
         couponDao.update(updatedCoupon)
@@ -104,28 +110,31 @@ class CouponRepository(
         val newBalance = coupon.currentValue - amount
         val isFullyUsed = newBalance <= 0
 
-        val updatedCoupon = coupon.copy(
-            currentValue = newBalance,
-            isArchived = if (isFullyUsed) true else coupon.isArchived
-        )
+        val updatedCoupon =
+                coupon.copy(
+                        currentValue = newBalance,
+                        isArchived = if (isFullyUsed) true else coupon.isArchived
+                )
 
         val couponState = Json.encodeToString(coupon)
-        val useHistory = CouponHistory(
-            couponId = coupon.id,
-            action = "Coupon Used",
-            changeSummary = amount.toString(),
-            couponState = couponState,
-        )
+        val useHistory =
+                CouponHistory(
+                        couponId = coupon.id,
+                        action = "Coupon Used",
+                        changeSummary = amount.toString(),
+                        couponState = couponState,
+                )
         couponHistoryDao.insert(useHistory)
 
         if (isFullyUsed) {
             val archiveState = Json.encodeToString(updatedCoupon.copy(isArchived = false))
-            val archiveHistory = CouponHistory(
-                couponId = coupon.id,
-                action = "Coupon Archived",
-                changeSummary = "Coupon automatically archived after being fully used.",
-                couponState = archiveState,
-            )
+            val archiveHistory =
+                    CouponHistory(
+                            couponId = coupon.id,
+                            action = "Coupon Archived",
+                            changeSummary = "Coupon automatically archived after being fully used.",
+                            couponState = archiveState,
+                    )
             couponHistoryDao.insert(archiveHistory)
         }
 
@@ -155,7 +164,9 @@ class CouponRepository(
             changes.add("Name changed from '${oldCoupon.name}' to '${newCoupon.name}'")
         }
         if (oldCoupon.currentValue != newCoupon.currentValue) {
-            changes.add("Balance changed from ${oldCoupon.currentValue} to ${newCoupon.currentValue}")
+            changes.add(
+                    "Balance changed from ${oldCoupon.currentValue} to ${newCoupon.currentValue}"
+            )
         }
         if (oldCoupon.expirationDate != newCoupon.expirationDate) {
             changes.add("Expiration date changed")
@@ -168,6 +179,16 @@ class CouponRepository(
         }
         return if (changes.isEmpty()) "No changes" else changes.joinToString(", ")
     }
+
+    val pendingCoupons: Flow<List<Coupon>> = couponDao.getPendingCoupons()
+
+    suspend fun approveCoupon(coupon: Coupon) {
+        val approvedCoupon = coupon.copy(isPending = false)
+        update(approvedCoupon)
+    }
+
+    suspend fun deletePendingCoupon(coupon: Coupon) {
+        // Hard delete for pending coupons that are rejected
+        couponDao.delete(coupon)
+    }
 }
-
-

@@ -12,7 +12,10 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CouponDao {
-    @Query("SELECT * FROM coupon WHERE isArchived = 0") fun getAll(): Flow<List<Coupon>>
+    @Query("SELECT * FROM coupon WHERE isArchived = 0 AND isPending = 0")
+    fun getAll(): Flow<List<Coupon>>
+
+    @Query("SELECT * FROM coupon WHERE isPending = 1") fun getPendingCoupons(): Flow<List<Coupon>>
 
     @Query("SELECT * FROM coupon WHERE id = :couponId")
     suspend fun getCouponById(couponId: Long): Coupon?
@@ -23,16 +26,21 @@ interface CouponDao {
     @Query("SELECT * FROM coupon WHERE id = :couponId")
     fun getCouponByIdFlow(couponId: Long): Flow<Coupon?>
 
-    @Query("SELECT * FROM coupon WHERE isArchived = 1") fun getArchived(): Flow<List<Coupon>>
+    @Query("SELECT * FROM coupon WHERE isArchived = 1 AND isPending = 0")
+    fun getArchived(): Flow<List<Coupon>>
 
-    @Query("SELECT SUM(currentValue) FROM coupon WHERE isArchived = 0 AND isOneTime = 0")
+    @Query(
+            "SELECT SUM(currentValue) FROM coupon WHERE isArchived = 0 AND isOneTime = 0 AND isPending = 0"
+    )
     fun getTotalBalance(): Flow<Double>
 
-    @Query("SELECT SUM(initialValue - currentValue) FROM coupon WHERE isOneTime = 0")
+    @Query(
+            "SELECT SUM(initialValue - currentValue) FROM coupon WHERE isOneTime = 0 AND isPending = 0"
+    )
     fun getTotalSpent(): Flow<Double>
 
     @Query(
-            "SELECT IFNULL(c.name, 'Uncategorized') as name, IFNULL(c.colorHex, '#808080') as colorHex, SUM(co.initialValue - co.currentValue) as totalSpent FROM coupon co LEFT JOIN category c ON co.categoryId = c.id WHERE co.isOneTime = 0 GROUP BY c.name, c.colorHex"
+            "SELECT IFNULL(c.name, 'Uncategorized') as name, IFNULL(c.colorHex, '#808080') as colorHex, SUM(co.initialValue - co.currentValue) as totalSpent FROM coupon co LEFT JOIN category c ON co.categoryId = c.id WHERE co.isOneTime = 0 AND co.isPending = 0 GROUP BY c.name, c.colorHex"
     )
     fun getSpendingByCategory(): Flow<List<CategorySpending>>
 
@@ -48,5 +56,3 @@ interface CouponDao {
 
     @Update suspend fun update(coupon: Coupon)
 }
-
-

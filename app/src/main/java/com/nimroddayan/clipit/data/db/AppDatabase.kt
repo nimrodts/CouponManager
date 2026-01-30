@@ -13,7 +13,7 @@ import com.nimroddayan.clipit.data.model.CouponHistory
 
 @Database(
         entities = [Coupon::class, Category::class, CouponHistory::class],
-        version = 16,
+        version = 18,
         exportSchema = false
 )
 @TypeConverters(com.nimroddayan.clipit.data.db.TypeConverters::class)
@@ -123,6 +123,22 @@ abstract class AppDatabase : RoomDatabase() {
                     }
                 }
 
+        private val MIGRATION_16_17 =
+                object : Migration(16, 17) {
+                    override fun migrate(db: SupportSQLiteDatabase) {
+                        db.execSQL(
+                                "ALTER TABLE Coupon ADD COLUMN isPending INTEGER NOT NULL DEFAULT 0"
+                        )
+                    }
+                }
+
+        private val MIGRATION_17_18 =
+                object : Migration(17, 18) {
+                    override fun migrate(db: SupportSQLiteDatabase) {
+                        db.execSQL("ALTER TABLE Coupon ADD COLUMN redemptionUrl TEXT")
+                    }
+                }
+
         @Volatile private var isShutdown = false
 
         fun getDatabase(context: Context): AppDatabase {
@@ -141,10 +157,11 @@ abstract class AppDatabase : RoomDatabase() {
                                                 "coupon_database"
                                         )
                                         .addMigrations(
-                                                MIGRATION_12_13,
                                                 MIGRATION_13_14,
                                                 MIGRATION_14_15,
-                                                MIGRATION_15_16
+                                                MIGRATION_15_16,
+                                                MIGRATION_16_17,
+                                                MIGRATION_17_18
                                         )
                                         .build()
                         INSTANCE = instance
@@ -167,5 +184,3 @@ abstract class AppDatabase : RoomDatabase() {
         }
     }
 }
-
-

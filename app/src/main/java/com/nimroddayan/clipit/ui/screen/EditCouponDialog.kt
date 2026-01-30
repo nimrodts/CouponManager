@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Label
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
@@ -65,6 +66,7 @@ fun EditCouponDialog(
     var currentValue by remember { mutableStateOf(coupon.currentValue.toString()) }
     var expiration by remember { mutableStateOf<Long?>(coupon.expirationDate) }
     var redeemCode by remember { mutableStateOf(coupon.redeemCode) }
+    var redemptionUrl by remember { mutableStateOf(coupon.redemptionUrl) }
     var isOneTime by remember { mutableStateOf(coupon.isOneTime) }
     var expanded by remember { mutableStateOf(false) }
     var selectedCategory by
@@ -147,6 +149,13 @@ fun EditCouponDialog(
                         onValueChange = { redeemCode = it },
                         label = { Text("Redeem Code") },
                         leadingIcon = { Icon(Icons.Default.QrCode, contentDescription = null) },
+                        modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                        value = redemptionUrl ?: "",
+                        onValueChange = { redemptionUrl = it },
+                        label = { Text("Redemption URL") },
+                        leadingIcon = { Icon(Icons.Default.Link, contentDescription = null) },
                         modifier = Modifier.fillMaxWidth(),
                 )
                 Box {
@@ -243,7 +252,9 @@ fun EditCouponDialog(
                                                     expirationDate = exp,
                                                     categoryId = category.id,
                                                     redeemCode = redeemCode,
-                                                    isOneTime = isOneTime
+                                                    redemptionUrl = redemptionUrl,
+                                                    isOneTime = isOneTime,
+                                                    isPending = false
                                             )
                                     couponViewModel.update(updatedCoupon)
                                 }
@@ -257,6 +268,3 @@ fun EditCouponDialog(
         }
     }
 }
-
-
-

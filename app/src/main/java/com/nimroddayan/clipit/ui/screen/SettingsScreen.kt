@@ -45,92 +45,120 @@ fun SettingsScreen(
         onNavigateToArchive: () -> Unit,
         onNavigateToAiSettings: () -> Unit,
         onNavigateToDatabaseSettings: () -> Unit,
+        onManageWhitelist: () -> Unit,
 ) {
-    var showCurrencyDialog by remember { mutableStateOf(false) }
+        var showCurrencyDialog by remember { mutableStateOf(false) }
 
-    Column(
-            modifier =
-                    Modifier.fillMaxSize()
-                            .background(MaterialTheme.colorScheme.background)
-                            .padding(16.dp)
-    ) {
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-                "General Settings",
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(bottom = 16.dp)
-        )
-
-        ElevatedCard(
-                elevation = CardDefaults.elevatedCardElevation(2.dp),
-                colors =
-                        CardDefaults.elevatedCardColors(
-                                containerColor = MaterialTheme.colorScheme.surface
-                        )
+        Column(
+                modifier =
+                        Modifier.fillMaxSize()
+                                .background(MaterialTheme.colorScheme.background)
+                                .padding(16.dp)
         ) {
-            Column {
-                SettingsItem(
-                        icon = Icons.Filled.DarkMode,
-                        title = "Dark Mode",
-                        onClick = { onThemeChange(!isDarkTheme) }
-                ) { Switch(checked = isDarkTheme, onCheckedChange = onThemeChange) }
-                HorizontalDivider(
-                        modifier = Modifier.padding(start = 56.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                        "General Settings",
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.padding(bottom = 16.dp)
                 )
-                SettingsItem(
-                        icon = Icons.Filled.AttachMoney,
-                        title = "Currency",
-                        onClick = { showCurrencyDialog = true }
-                )
-                HorizontalDivider(
-                        modifier = Modifier.padding(start = 56.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-                SettingsItem(
-                        icon = Icons.Filled.Category,
-                        title = "Manage Categories",
-                        onClick = onManageCategories
-                )
-                HorizontalDivider(
-                        modifier = Modifier.padding(start = 56.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-                SettingsItem(
-                        icon = Icons.Filled.Archive,
-                        title = "Archived Coupons",
-                        onClick = onNavigateToArchive
-                )
-                HorizontalDivider(
-                        modifier = Modifier.padding(start = 56.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-                SettingsItem(
-                        icon = Icons.Filled.SmartToy,
-                        title = "AI Settings",
-                        onClick = onNavigateToAiSettings
-                )
-                HorizontalDivider(
-                        modifier = Modifier.padding(start = 56.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-                SettingsItem(
-                        icon = Icons.Filled.Dns,
-                        title = "Database",
-                        onClick = onNavigateToDatabaseSettings
-                )
-            }
-        }
-    }
 
-    if (showCurrencyDialog) {
-        val currentCurrency by viewModel.selectedCurrency.collectAsState()
-        CurrencySelectionDialog(
-                currentCurrencyCode = currentCurrency,
-                onCurrencySelected = { viewModel.saveSelectedCurrency(it.code) },
-                onDismiss = { showCurrencyDialog = false }
-        )
-    }
+                ElevatedCard(
+                        elevation = CardDefaults.elevatedCardElevation(2.dp),
+                        colors =
+                                CardDefaults.elevatedCardColors(
+                                        containerColor = MaterialTheme.colorScheme.surface
+                                )
+                ) {
+                        Column {
+                                SettingsItem(
+                                        icon = Icons.Filled.DarkMode,
+                                        title = "Dark Mode",
+                                        onClick = { onThemeChange(!isDarkTheme) }
+                                ) { Switch(checked = isDarkTheme, onCheckedChange = onThemeChange) }
+                                HorizontalDivider(
+                                        modifier = Modifier.padding(start = 56.dp),
+                                        color =
+                                                MaterialTheme.colorScheme.outlineVariant.copy(
+                                                        alpha = 0.5f
+                                                )
+                                )
+                                SettingsItem(
+                                        icon = Icons.Filled.AttachMoney,
+                                        title = "Currency",
+                                        onClick = { showCurrencyDialog = true }
+                                )
+                                HorizontalDivider(
+                                        modifier = Modifier.padding(start = 56.dp),
+                                        color =
+                                                MaterialTheme.colorScheme.outlineVariant.copy(
+                                                        alpha = 0.5f
+                                                )
+                                )
+                                SettingsItem(
+                                        icon = Icons.Filled.Category,
+                                        title = "Manage Categories",
+                                        onClick = onManageCategories
+                                )
+                                HorizontalDivider(
+                                        modifier = Modifier.padding(start = 56.dp),
+                                        color =
+                                                MaterialTheme.colorScheme.outlineVariant.copy(
+                                                        alpha = 0.5f
+                                                )
+                                )
+                                SettingsItem(
+                                        icon = Icons.Filled.Archive,
+                                        title = "Archived Coupons",
+                                        onClick = onNavigateToArchive
+                                )
+                                HorizontalDivider(
+                                        modifier = Modifier.padding(start = 56.dp),
+                                        color =
+                                                MaterialTheme.colorScheme.outlineVariant.copy(
+                                                        alpha = 0.5f
+                                                )
+                                )
+                                SettingsItem(
+                                        icon = Icons.Filled.SmartToy,
+                                        title = "AI Settings",
+                                        onClick = onNavigateToAiSettings
+                                )
+                                HorizontalDivider(
+                                        modifier = Modifier.padding(start = 56.dp),
+                                        color =
+                                                MaterialTheme.colorScheme.outlineVariant.copy(
+                                                        alpha = 0.5f
+                                                )
+                                )
+                                SettingsItem(
+                                        icon = Icons.Filled.Dns,
+                                        title = "Database",
+                                        onClick = onNavigateToDatabaseSettings
+                                )
+                                HorizontalDivider(
+                                        modifier = Modifier.padding(start = 56.dp),
+                                        color =
+                                                MaterialTheme.colorScheme.outlineVariant.copy(
+                                                        alpha = 0.5f
+                                                )
+                                )
+                                SettingsItem(
+                                        icon = Icons.Filled.SmartToy,
+                                        title = "SMS Extraction Whitelist",
+                                        onClick = onManageWhitelist
+                                )
+                        }
+                }
+        }
+
+        if (showCurrencyDialog) {
+                val currentCurrency by viewModel.selectedCurrency.collectAsState()
+                CurrencySelectionDialog(
+                        currentCurrencyCode = currentCurrency,
+                        onCurrencySelected = { viewModel.saveSelectedCurrency(it.code) },
+                        onDismiss = { showCurrencyDialog = false }
+                )
+        }
 }
 
 @Composable
@@ -140,28 +168,28 @@ private fun SettingsItem(
         onClick: () -> Unit,
         content: @Composable (() -> Unit)? = null
 ) {
-    Row(
-            modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-                imageVector = icon,
-                contentDescription = title,
-                tint = MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-                text = title,
-                modifier = Modifier.padding(start = 16.dp).weight(1f),
-                color = MaterialTheme.colorScheme.onSurface
-        )
-        if (content == null) {
-            Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-            )
-        } else {
-            content()
+        Row(
+                modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+        ) {
+                Icon(
+                        imageVector = icon,
+                        contentDescription = title,
+                        tint = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                        text = title,
+                        modifier = Modifier.padding(start = 16.dp).weight(1f),
+                        color = MaterialTheme.colorScheme.onSurface
+                )
+                if (content == null) {
+                        Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                } else {
+                        content()
+                }
         }
-    }
 }

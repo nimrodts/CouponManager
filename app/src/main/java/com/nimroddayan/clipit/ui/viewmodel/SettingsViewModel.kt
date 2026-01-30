@@ -3,6 +3,7 @@
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nimroddayan.clipit.data.UserPreferencesRepository
+import com.nimroddayan.clipit.data.gemini.DetectionMode
 import com.nimroddayan.clipit.data.gemini.GeminiApiKeyRepository
 import com.nimroddayan.clipit.data.gemini.GeminiModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -55,9 +56,37 @@ class SettingsViewModel(
                 geminiApiKeyRepository.saveTemperature(temperature)
         }
 
+        val detectionMode: StateFlow<DetectionMode> =
+                geminiApiKeyRepository.getDetectionMode.stateIn(
+                        scope = viewModelScope,
+                        started = SharingStarted.WhileSubscribed(5000),
+                        initialValue = DetectionMode.LOCAL_HEURISTIC
+                )
+
+        suspend fun saveDetectionMode(mode: DetectionMode) {
+                geminiApiKeyRepository.saveDetectionMode(mode)
+        }
+
         fun saveSelectedCurrency(currencyCode: String) {
                 viewModelScope.launch {
                         userPreferencesRepository.saveSelectedCurrency(currencyCode)
+                }
+        }
+
+        val smsSenderWhitelist: StateFlow<Set<String>> =
+                userPreferencesRepository.smsSenderWhitelist.stateIn(
+                        scope = viewModelScope,
+                        started = SharingStarted.WhileSubscribed(5000),
+                        initialValue = emptySet()
+                )
+
+        fun addSenderToWhitelist(sender: String) {
+                viewModelScope.launch { userPreferencesRepository.addSenderToWhitelist(sender) }
+        }
+
+        fun removeSenderFromWhitelist(sender: String) {
+                viewModelScope.launch {
+                        userPreferencesRepository.removeSenderFromWhitelist(sender)
                 }
         }
 }

@@ -1,5 +1,6 @@
 ﻿package com.nimroddayan.clipit.data.gemini
 
+import android.content.Context
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.generationConfig
 import java.io.IOException
@@ -8,12 +9,16 @@ import kotlinx.coroutines.flow.first
 import org.json.JSONArray
 import org.json.JSONObject
 
-class GeminiCouponExtractor(private val geminiApiKeyRepository: GeminiApiKeyRepository) {
+class GeminiCouponExtractor(
+        private val context: Context,
+        private val geminiApiKeyRepository: GeminiApiKeyRepository
+) {
 
     suspend fun extractCoupon(text: String): ParsedCoupon {
         val apiKey = geminiApiKeyRepository.getApiKey.first()
         if (apiKey.isEmpty()) {
-            throw InvalidApiKeyException("API Key is empty")
+            android.util.Log.w("GeminiExtractor", "API Key is empty, using Regex fallback")
+            return extractCouponRegex(text)
         }
 
         val model = geminiApiKeyRepository.getModel.first()
@@ -23,7 +28,6 @@ class GeminiCouponExtractor(private val geminiApiKeyRepository: GeminiApiKeyRepo
                 GenerativeModel(
                         modelName = model.modelName,
                         apiKey = apiKey,
-                        // Force the model to return strict JSON
                         generationConfig =
                                 generationConfig {
                                     responseMimeType = "application/json"
@@ -41,18 +45,34 @@ class GeminiCouponExtractor(private val geminiApiKeyRepository: GeminiApiKeyRepo
         STRICT EXTRACTION RULES:
         1. Store Name: Identify the brand (e.g., "KSP", "Super-Pharm", "Nike").
         
-        2. Code: Aggressively search for the redemption code.
-           - PATTERN PRIORITY: Look specifically for multi-part numeric codes separated by a dash, such as "12345-67890" or "1111-2222-3333". 
-           - Extract the ENTIRE string including the dashes. Do not return only the first part.
-           - Also look for standard alphanumeric codes (e.g., "AB-1234", "GIFT100").
-           - Look after labels: "Code", "Ref", "Barcode", "Number", "קוד", "אסמכתא", "מספר".
+        2. Redemption Data (The "Key" to value):
+            - OBJECTIVE: Find the string OR link needed to redeem.
+
+            - PRIORITY 1: Explicitly Labeled Data (The "Gold Standard").
+                - Look for labels: "Code", "Ref", "Barcode", "Coupon", "קוד", "אסמכתא", "מספר שובר", "קוד השובר שלך".
+                - ACTION: Extract exactly what follows the label.
+                - IF the value is a Number/Text (e.g., "12345"), map to JSON 'redeemCode'.
+                - IF the value is a URL (starts with http/https), map to JSON 'redemptionUrl'. 
+                - (Example: "קוד השובר שלך: https://bit.ly..." -> This is a URL).
+
+            - PRIORITY 2: Dynamic Links (No Label).
+                - If no label exists, look for a URL in the context of redemption actions.
+                - Keywords: "Click to redeem", "Link to voucher", "לחץ למימוש", "לכניסה לשובר".
+                - Map this to JSON 'redemptionUrl'.
+
+            - PRIORITY 3: Pattern Matching (Fallback).
+                - If no labels and no links found, look for standalone patterns (e.g., "AA-BB-CC", "SALE20").
+
+            - SAFETY FILTERS (What to IGNORE):
+                - DO NOT extract "Order Numbers" (מספר הזמנה) even if they look like codes.
+                - DO NOT extract generic links (e.g., "Terms of Service", "Unsubscribe").
            
         3. Value: Calculate the TOTAL effective balance of the code.
-           - Step A: Identify the unit value (e.g., "100 ₪", "$50").
-           - Step B: Scan immediately nearby for a quantity multiplier (keywords: "Quantity", "Qty", "כמות", "units", "x3").
-           - Step C: CALCULATION REQUIRED. 
-             - If a quantity is found (e.g., "Quantity: 3"), multiply Unit Value * Quantity (e.g., 100 * 3 = 300).
-             - If text says "Code for total amount" (קוד אחד... בסכום שהוזמן), ensure you output the aggregate sum.
+            - Step A: Identify the unit value (e.g., "100 ₪", "$50").
+            - Step B: Scan immediately nearby for a quantity multiplier (keywords: "Quantity", "Qty", "כמות", "units", "x3").
+            - Step C: CALCULATION REQUIRED. 
+                - If a quantity is found (e.g., "Quantity: 3"), multiply Unit Value * Quantity (e.g., 100 * 3 = 300).
+                - If text says "Code for total amount" (קוד אחד... בסכום שהוזמן), ensure you output the aggregate sum.
          
         4. Date: Output format YYYY-MM-DD. Handle "Valid for X years" relative to $today.
         
@@ -62,57 +82,159 @@ class GeminiCouponExtractor(private val geminiApiKeyRepository: GeminiApiKeyRepo
           "redeemCode": "string (MUST include hyphens if present, e.g. '1234-5678')",
           "initialValue": double,
           "expirationDate": "YYYY-MM-DD",
-          "description": "string"
+          "description": "string",
+          "redemptionUrl": "string (Optional: URL for redemption)"
         }
 
         INPUT TEXT:
         "$text"
     """.trimIndent()
 
-        val response = generativeModel.generateContent(prompt)
+        try {
+            val response = generativeModel.generateContent(prompt)
+            val json = response.text?.trim()?.replace("```json", "")?.replace("```", "")
 
-        val json = response.text?.trim()?.replace("```json", "")?.replace("```", "")
-
-        if (json.isNullOrBlank()) {
-            throw IOException(
-                    "Failed to extract coupon details. Empty or blank response from Gemini model."
-            )
-        }
-
-        val jsonObject: JSONObject
-        val sanitizedJson = json.trim()
-        if (sanitizedJson.startsWith("[")) {
-            val jsonArray = JSONArray(sanitizedJson)
-            if (jsonArray.length() > 0) {
-                jsonObject = jsonArray.getJSONObject(0)
-            } else {
-                throw IOException(
-                        "Failed to extract coupon details. Empty JSON array response from Gemini model."
-                )
+            if (json.isNullOrBlank()) {
+                throw IOException("Empty response from AI")
             }
-        } else {
-            jsonObject = JSONObject(sanitizedJson)
+
+            val jsonObject: JSONObject
+            val sanitizedJson = json.trim()
+            if (sanitizedJson.startsWith("[")) {
+                val jsonArray = JSONArray(sanitizedJson)
+                if (jsonArray.length() > 0) {
+                    jsonObject = jsonArray.getJSONObject(0)
+                } else {
+                    throw IOException("Empty JSON array")
+                }
+            } else {
+                jsonObject = JSONObject(sanitizedJson)
+            }
+
+            val expirationDateString = jsonObject.optString("expirationDate")
+            val expirationDate =
+                    if (expirationDateString.isNullOrBlank() ||
+                                    expirationDateString.equals("null", ignoreCase = true)
+                    ) {
+                        LocalDate.now().plusYears(1).toString()
+                    } else {
+                        expirationDateString
+                    }
+
+            val rawInitialValue = jsonObject.optDouble("initialValue")
+            // Check if NaN
+            val initialValue = if (rawInitialValue.isNaN()) null else rawInitialValue
+
+            return ParsedCoupon(
+                    storeName = jsonObject.optString("storeName"),
+                    redeemCode = jsonObject.optString("redeemCode"),
+                    initialValue = initialValue,
+                    expirationDate = expirationDate,
+                    description = jsonObject.optString("description"),
+                    redemptionUrl = jsonObject.optString("redemptionUrl")
+            )
+        } catch (e: Exception) {
+            android.util.Log.e(
+                    "GeminiExtractor",
+                    "AI Extraction failed (Quota/Network). Falling back to regex.",
+                    e
+            )
+            return extractCouponRegex(text)
+        }
+    }
+
+    private fun extractCouponRegex(text: String): ParsedCoupon {
+        // 1. Value Extraction (Enhanced)
+        // Matches: ₪100, $50, 100₪, 100 NIS, 100 ש"ח, 100.50
+        val valueRegex =
+                Regex(
+                        """(₪|\$|€)\s*(\d+(\.\d{1,2})?)|(\d+(\.\d{1,2})?)\s*(₪|\$|€|NIS|nis|ש"ח|שקלים)"""
+                )
+        val valueMatch = valueRegex.find(text)
+
+        var initialValue: Double? = null
+        if (valueMatch != null) {
+            // Group 2 is value if symbol first (₪100)
+            // Group 4 is value if symbol last (100₪)
+            val valGroup1 = valueMatch.groups[2]?.value
+            val valGroup2 = valueMatch.groups[4]?.value
+            initialValue = (valGroup1 ?: valGroup2)?.toDoubleOrNull()
         }
 
-        val expirationDateString = jsonObject.optString("expirationDate")
-        val expirationDate =
-                if (expirationDateString.isNullOrBlank() ||
-                                expirationDateString.equals("null", ignoreCase = true)
-                ) {
-                    LocalDate.now().plusYears(1).toString()
-                } else {
-                    expirationDateString
-                }
+        // 2. Code Extraction (Alphanumeric with dashes, length > 4)
+        // Matches: 1234-5678, ABCD-1234, 12345678, GIFT100
+        val codeRegex =
+                Regex(
+                        """(?<!\d)\d{4,}-\d{4,}(?!\d)|[A-Z0-9]{4,}-[A-Z0-9]{4,}(-[A-Z0-9]{4,})?|\b[A-Z0-9]{5,}\b"""
+                )
+        val codeMatch = codeRegex.find(text)
+        val redeemCode = codeMatch?.value ?: ""
 
-        val rawInitialValue = jsonObject.optDouble("initialValue")
-        val initialValue = if (rawInitialValue.isNaN()) null else rawInitialValue
+        // 3. Store Name - Naive guess: First word if it looks like a name, or specific keywords
+        var storeName = "Unknown Store"
+        val knownStores =
+                listOf(
+                        "KSP",
+                        "Super-Pharm",
+                        "Wolt",
+                        "Dominos",
+                        "Mcdonalds",
+                        "Nike",
+                        "Adidas",
+                        "Fox",
+                        "Castro",
+                        "Renuar",
+                        "Terminal X",
+                        "AliExpress",
+                        "Amazon",
+                        "Next",
+                        "Shein",
+                        "Zara",
+                        "H&M"
+                )
+        val foundStore = knownStores.find { text.contains(it, ignoreCase = true) }
+        if (foundStore != null) {
+            storeName = foundStore
+        } else {
+            // Fallback: take first non-common word or just "New Coupon"
+            storeName = "New Coupon"
+        }
 
         return ParsedCoupon(
-                storeName = jsonObject.optString("storeName"),
-                redeemCode = jsonObject.optString("redeemCode"),
-                initialValue = initialValue,
-                expirationDate = expirationDate,
-                description = jsonObject.optString("description")
+                storeName = storeName,
+                redeemCode = redeemCode,
+                initialValue = initialValue ?: 0.0,
+                expirationDate = LocalDate.now().plusYears(1).toString(),
+                description = text,
+                redemptionUrl = null
         )
+    }
+    suspend fun hasCoupon(text: String): Boolean {
+        // 1. Quick local check (Optimization & Fallback)
+        val keywords =
+                listOf(
+                        "coupon",
+                        "code",
+                        "voucher",
+                        "gift card",
+                        "promo",
+                        "קופון",
+                        "קוד",
+                        "שובר",
+                        "מתנה",
+                        "הטבה",
+                        "מימוש",
+                        "אסמכתא",
+                        "כרטיס",
+                        "Gift"
+                )
+        if (keywords.any { text.contains(it, ignoreCase = true) }) {
+            android.util.Log.d("GeminiExtractor", "Local keyword match found. Skipping AI check.")
+            return true
+        }
+
+        // Use Local LLM (AICore/Gemini Nano)
+        val localClassifier = LocalCouponClassifier(context)
+        return localClassifier.isCoupon(text)
     }
 }
