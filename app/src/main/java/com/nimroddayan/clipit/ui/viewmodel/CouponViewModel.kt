@@ -121,7 +121,11 @@ class CouponViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                _parsedCoupon.value = geminiCouponExtractor.extractCoupon(text)
+                val coupon = geminiCouponExtractor.extractCoupon(text)
+                _parsedCoupon.value = coupon
+                if (coupon.error != null) {
+                    _error.value = coupon.error
+                }
             } catch (e: Exception) {
                 _error.value = e.message
             } finally {

@@ -133,13 +133,22 @@ class GeminiCouponExtractor(
                     description = jsonObject.optString("description"),
                     redemptionUrl = jsonObject.optString("redemptionUrl")
             )
+        } catch (e: com.google.ai.client.generativeai.type.QuotaExceededException) {
+            android.util.Log.w("GeminiExtractor", "Quota exceeded. Falling back to regex.")
+            val fallback = extractCouponRegex(text)
+            return fallback.copy(error = "Quota Limit Reached")
+        } catch (e: IOException) {
+            android.util.Log.e("GeminiExtractor", "IO/Parsing error. Falling back to regex.", e)
+            val fallback = extractCouponRegex(text)
+            return fallback.copy(error = "AI Parsing Failed")
         } catch (e: Exception) {
             android.util.Log.e(
                     "GeminiExtractor",
-                    "AI Extraction failed (Quota/Network). Falling back to regex.",
+                    "AI Extraction failed (Unknown). Falling back to regex.",
                     e
             )
-            return extractCouponRegex(text)
+            val fallback = extractCouponRegex(text)
+            return fallback.copy(error = "AI Extraction Failed: ${e.message}")
         }
     }
 

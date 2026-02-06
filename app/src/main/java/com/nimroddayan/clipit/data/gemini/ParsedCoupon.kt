@@ -6,5 +6,6 @@ data class ParsedCoupon(
         val expirationDate: String?,
         val description: String?,
         val redeemCode: String?,
-        val redemptionUrl: String?
+        val redemptionUrl: String?,
+        val error: String? = null
 )

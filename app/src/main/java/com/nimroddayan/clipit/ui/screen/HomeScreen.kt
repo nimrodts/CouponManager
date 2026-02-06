@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
@@ -521,6 +522,30 @@ fun CouponItem(
                                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
+                        }
+                    } else if (!coupon.redemptionUrl.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        androidx.compose.material3.Surface(
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp),
+                                color = MaterialTheme.colorScheme.tertiaryContainer,
+                        ) {
+                            Row(
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                        Icons.Default.Link,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                        text = "Link Available",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                )
+                            }
                         }
                     }
 

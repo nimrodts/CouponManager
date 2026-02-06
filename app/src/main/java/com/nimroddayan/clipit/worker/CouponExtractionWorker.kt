@@ -59,6 +59,18 @@ class CouponExtractionWorker(context: Context, params: WorkerParameters) :
         // 3. Extract
         try {
             val parsedCoupon = extractor.extractCoupon(smsBody)
+            if (parsedCoupon.error == "Quota Limit Reached") {
+                showNotification(
+                        "Quota Exceeded",
+                        "Coupons extraction paused. Will retry automatically."
+                )
+                return Result.retry()
+            } else if (parsedCoupon.error != null) {
+                android.util.Log.w(
+                        "CouponWorker",
+                        "Extraction warning: ${parsedCoupon.error}. Using fallback data."
+                )
+            }
 
             // 4. Persist as Pending
             val repository = (context as CouponApplication).couponRepository
@@ -133,6 +145,8 @@ class CouponExtractionWorker(context: Context, params: WorkerParameters) :
 
             return Result.success()
         } catch (e: com.google.ai.client.generativeai.type.QuotaExceededException) {
+            // This catch block might not be reached if exception is caught in extractor,
+            // but keeping it for safety if extractor throws it directly or other parts do.
             e.printStackTrace()
             showNotification(
                     "Quota Exceeded",

@@ -102,7 +102,18 @@ fun AddCouponDialog(
         parsedCoupon?.let { coupon ->
             name = coupon.storeName ?: name
             value = coupon.initialValue?.toString() ?: value
-            redeemCode = coupon.redeemCode ?: redeemCode
+
+            // Auto-fill logic for Code/URL
+            if (!coupon.redemptionUrl.isNullOrBlank()) {
+                redemptionUrl = coupon.redemptionUrl
+                isUrlMode = true
+                // Also fill code if available, just in case user switches back
+                redeemCode = coupon.redeemCode ?: redeemCode
+            } else {
+                redeemCode = coupon.redeemCode ?: redeemCode
+                isUrlMode = false
+            }
+
             coupon.expirationDate?.let {
                 val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                 expiration = sdf.parse(it)?.time
