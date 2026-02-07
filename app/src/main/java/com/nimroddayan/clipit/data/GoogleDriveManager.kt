@@ -14,7 +14,10 @@ import com.google.api.services.drive.Drive
 import com.google.api.services.drive.DriveScopes
 import java.io.File
 import java.io.FileOutputStream
+import java.text.SimpleDateFormat
 import java.util.Collections
+import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -60,31 +63,17 @@ class GoogleDriveManager(private val context: Context) {
                 throw Exception("Failed to create local backup file")
             }
 
-            // 3. Metadata
+            // 3. Metadata with timestamped filename
+            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
             val fileMetadata = com.google.api.services.drive.model.File()
-            fileMetadata.name = "coupon_manager_backup.db"
+            fileMetadata.name = "coupon_manager_backup_$timestamp.db"
             fileMetadata.mimeType = "application/x-sqlite3"
-            // Store in a specific folder or root.
-            // Query for existing file to update it
-            val fileList =
-                    googleDriveService
-                            .files()
-                            .list()
-                            .setQ("name = 'coupon_manager_backup.db' and trashed = false")
-                            .setSpaces("drive")
-                            .execute()
 
             val mediaContent = FileContent("application/x-sqlite3", tempBackupFile)
 
             try {
-                if (fileList.files.isNotEmpty()) {
-                    // Update existing
-                    val fileId = fileList.files[0].id
-                    googleDriveService.files().update(fileId, null, mediaContent).execute()
-                } else {
-                    // Create new
-                    googleDriveService.files().create(fileMetadata, mediaContent).execute()
-                }
+                // Always create a new file (preserves backup history)
+                googleDriveService.files().create(fileMetadata, mediaContent).execute()
             } finally {
                 tempBackupFile.delete()
             }
@@ -109,13 +98,15 @@ class GoogleDriveManager(private val context: Context) {
                             .setApplicationName("ClipIt")
                             .build()
 
-            // 2. Find Backup
+            // 2. Find Latest Backup (search for prefix, order by modifiedTime desc)
             val fileList =
                     googleDriveService
                             .files()
                             .list()
-                            .setQ("name = 'coupon_manager_backup.db' and trashed = false")
+                            .setQ("name contains 'coupon_manager_backup' and trashed = false")
                             .setSpaces("drive")
+                            .setOrderBy("modifiedTime desc")
+                            .setPageSize(1)
                             .execute()
 
             if (fileList.files.isEmpty()) return@withContext false
@@ -158,12 +149,15 @@ class GoogleDriveManager(private val context: Context) {
                             .setApplicationName("ClipIt")
                             .build()
 
+            // Find latest backup by modifiedTime
             val fileList =
                     googleDriveService
                             .files()
                             .list()
-                            .setQ("name = 'coupon_manager_backup.db' and trashed = false")
+                            .setQ("name contains 'coupon_manager_backup' and trashed = false")
                             .setSpaces("drive")
+                            .setOrderBy("modifiedTime desc")
+                            .setPageSize(1)
                             .setFields("files(modifiedTime)")
                             .execute()
 

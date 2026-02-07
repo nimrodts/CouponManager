@@ -47,21 +47,26 @@ class GeminiCouponExtractor(
         
         2. Redemption Data (The "Key" to value):
             - OBJECTIVE: Find the string OR link needed to redeem.
+            
+            - CRITICAL URL RULE (HIGHEST PRIORITY): 
+                - ANY value that starts with "http://" or "https://" MUST go to 'redemptionUrl', NEVER to 'redeemCode'.
+                - This applies EVEN IF the URL follows a label like "קוד השובר שלך:" or "Your code:".
+                - Examples of URLs (go to redemptionUrl): "https://bit.ly/abc", "http://voucher.com/123", "https://redeem.store.com?code=XYZ"
+                - Examples of codes (go to redeemCode): "12345", "ABC-DEF-123", "GIFT2024"
 
-            - PRIORITY 1: Explicitly Labeled Data (The "Gold Standard").
+            - PRIORITY 1: Explicitly Labeled Data.
                 - Look for labels: "Code", "Ref", "Barcode", "Coupon", "קוד", "אסמכתא", "מספר שובר", "קוד השובר שלך".
-                - ACTION: Extract exactly what follows the label.
-                - IF the value is a Number/Text (e.g., "12345"), map to JSON 'redeemCode'.
-                - IF the value is a URL (starts with http/https), map to JSON 'redemptionUrl'. 
-                - (Example: "קוד השובר שלך: https://bit.ly..." -> This is a URL).
+                - Extract exactly what follows the label.
+                - IF the value is a URL -> put in 'redemptionUrl' (never in redeemCode).
+                - IF the value is alphanumeric text (NOT a URL) -> put in 'redeemCode'.
 
             - PRIORITY 2: Dynamic Links (No Label).
-                - If no label exists, look for a URL in the context of redemption actions.
-                - Keywords: "Click to redeem", "Link to voucher", "לחץ למימוש", "לכניסה לשובר".
-                - Map this to JSON 'redemptionUrl'.
+                - Look for URLs in context of redemption actions ("Click to redeem", "לחץ למימוש").
+                - Map to 'redemptionUrl'.
 
             - PRIORITY 3: Pattern Matching (Fallback).
-                - If no labels and no links found, look for standalone patterns (e.g., "AA-BB-CC", "SALE20").
+                - Look for standalone alphanumeric patterns (e.g., "AA-BB-CC", "SALE20").
+                - Map to 'redeemCode' ONLY if they don't start with http/https.
 
             - SAFETY FILTERS (What to IGNORE):
                 - DO NOT extract "Order Numbers" (מספר הזמנה) even if they look like codes.

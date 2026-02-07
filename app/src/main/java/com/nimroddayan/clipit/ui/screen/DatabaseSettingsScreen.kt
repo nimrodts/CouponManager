@@ -9,8 +9,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -24,6 +26,7 @@ import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
@@ -49,7 +52,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.common.api.ApiException
@@ -77,6 +82,8 @@ fun DatabaseSettingsScreen(
         var isRestoreLoading by remember { mutableStateOf(false) }
         var showSignOutConfirmationDialog by remember { mutableStateOf(false) }
         var statusMessage by remember { mutableStateOf<String?>(null) }
+        var showErrorDialog by remember { mutableStateOf(false) }
+        var errorDialogMessage by remember { mutableStateOf("") }
 
         // Formatting date
         val dateFormat = remember { java.text.SimpleDateFormat.getDateTimeInstance() }
@@ -102,7 +109,25 @@ fun DatabaseSettingsScreen(
                                 signedInAccount = task.getResult(ApiException::class.java)
                         } catch (e: ApiException) {
                                 e.printStackTrace()
-                                statusMessage = "Sign-in failed: ${e.statusCode}"
+                                val errorDescription =
+                                        when (e.statusCode) {
+                                                7 ->
+                                                        "Network error - check your internet connection"
+                                                8 -> "Internal error - please try again"
+                                                10 ->
+                                                        "Developer error - SHA-1 fingerprint may not be configured in Google Cloud Console"
+                                                12 -> "Sign-in required - please sign in again"
+                                                12500 ->
+                                                        "Sign-in failed - Google Play Services error"
+                                                12501 -> "Sign-in cancelled by user"
+                                                12502 -> "Sign-in already in progress"
+                                                else -> "Unknown error"
+                                        }
+                                statusMessage =
+                                        "Sign-in failed (${e.statusCode}): $errorDescription"
+                                errorDialogMessage =
+                                        "Sign-in failed (${e.statusCode})\n\n$errorDescription"
+                                showErrorDialog = true
                         }
                 }
 
@@ -582,6 +607,55 @@ fun DatabaseSettingsScreen(
                                 "The database has been successfully updated. The app will now reload."
                 )
         }
+
+        if (showErrorDialog) {
+                Dialog(onDismissRequest = { showErrorDialog = false }) {
+                        ElevatedCard(
+                                shape = MaterialTheme.shapes.extraLarge,
+                                colors =
+                                        CardDefaults.elevatedCardColors(
+                                                containerColor = MaterialTheme.colorScheme.surface
+                                        ),
+                                elevation = CardDefaults.elevatedCardElevation(8.dp)
+                        ) {
+                                Column(
+                                        modifier = Modifier.padding(24.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                        Icon(
+                                                imageVector = Icons.Filled.Warning,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.error,
+                                                modifier = Modifier.size(56.dp)
+                                        )
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        Text(
+                                                text = "Sign-In Error",
+                                                style = MaterialTheme.typography.headlineSmall,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Text(
+                                                text = errorDialogMessage,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                textAlign = TextAlign.Center
+                                        )
+                                        Spacer(modifier = Modifier.height(24.dp))
+                                        Button(
+                                                onClick = { showErrorDialog = false },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                colors =
+                                                        ButtonDefaults.buttonColors(
+                                                                containerColor =
+                                                                        MaterialTheme.colorScheme
+                                                                                .error
+                                                        )
+                                        ) { Text("Dismiss") }
+                                }
+                        }
+                }
+        }
 }
 
 private fun restartApp(context: Context) {
@@ -623,6 +697,3 @@ private fun SettingsItem(
                 )
         }
 }
-
-
-
