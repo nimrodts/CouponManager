@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.nimroddayan.clipit.data.gemini.DetectionMode
 import com.nimroddayan.clipit.data.gemini.GeminiModel
 import com.nimroddayan.clipit.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
@@ -60,6 +61,10 @@ fun AiSettingsScreen(
         val geminiTemperature by viewModel.geminiTemperature.collectAsState()
         var temperature by remember(geminiTemperature) { mutableStateOf(geminiTemperature) }
         val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
+
+        val detectionMode by viewModel.detectionMode.collectAsState()
+        var selectedDetectionMode by remember(detectionMode) { mutableStateOf(detectionMode) }
+        var detectionModeExpanded by remember { mutableStateOf(false) }
 
         Scaffold(
                 snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) },
@@ -160,6 +165,94 @@ fun AiSettingsScreen(
                                                                 Modifier.fillMaxWidth()
                                                                         .padding(top = 16.dp)
                                                 ) { Text("Save Key") }
+                                        }
+                                }
+
+                                // Detection Mode Section
+                                ElevatedCard(
+                                        colors =
+                                                CardDefaults.elevatedCardColors(
+                                                        containerColor =
+                                                                MaterialTheme.colorScheme.surface
+                                                ),
+                                        elevation = CardDefaults.elevatedCardElevation(2.dp)
+                                ) {
+                                        Column(modifier = Modifier.padding(16.dp)) {
+                                                Text(
+                                                        "Detection Strategy",
+                                                        style = MaterialTheme.typography.titleMedium
+                                                )
+                                                Spacer(modifier = Modifier.height(16.dp))
+
+                                                ExposedDropdownMenuBox(
+                                                        expanded = detectionModeExpanded,
+                                                        onExpandedChange = {
+                                                                detectionModeExpanded =
+                                                                        !detectionModeExpanded
+                                                        },
+                                                ) {
+                                                        OutlinedTextField(
+                                                                modifier =
+                                                                        Modifier.menuAnchor()
+                                                                                .fillMaxWidth(),
+                                                                readOnly = true,
+                                                                value =
+                                                                        selectedDetectionMode
+                                                                                .displayName,
+                                                                onValueChange = {},
+                                                                label = { Text("Mode") },
+                                                                trailingIcon = {
+                                                                        ExposedDropdownMenuDefaults
+                                                                                .TrailingIcon(
+                                                                                        expanded =
+                                                                                                detectionModeExpanded
+                                                                                )
+                                                                },
+                                                        )
+                                                        ExposedDropdownMenu(
+                                                                expanded = detectionModeExpanded,
+                                                                onDismissRequest = {
+                                                                        detectionModeExpanded =
+                                                                                false
+                                                                },
+                                                        ) {
+                                                                DetectionMode.values().forEach {
+                                                                        mode ->
+                                                                        DropdownMenuItem(
+                                                                                text = {
+                                                                                        Text(
+                                                                                                mode.displayName
+                                                                                        )
+                                                                                },
+                                                                                onClick = {
+                                                                                        selectedDetectionMode =
+                                                                                                mode
+                                                                                        detectionModeExpanded =
+                                                                                                false
+                                                                                },
+                                                                                contentPadding =
+                                                                                        ExposedDropdownMenuDefaults
+                                                                                                .ItemContentPadding,
+                                                                        )
+                                                                }
+                                                        }
+                                                }
+                                                Button(
+                                                        onClick = {
+                                                                coroutineScope.launch {
+                                                                        viewModel.saveDetectionMode(
+                                                                                selectedDetectionMode
+                                                                        )
+                                                                        snackbarHostState
+                                                                                .showSnackbar(
+                                                                                        "Detection mode updated successfully"
+                                                                                )
+                                                                }
+                                                        },
+                                                        modifier =
+                                                                Modifier.fillMaxWidth()
+                                                                        .padding(top = 16.dp)
+                                                ) { Text("Update Mode") }
                                         }
                                 }
 

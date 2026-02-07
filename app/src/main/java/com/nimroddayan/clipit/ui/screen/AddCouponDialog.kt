@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Label
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
@@ -61,7 +62,17 @@ import kotlinx.coroutines.launch
 fun AddCouponDialog(
         categoryViewModel: CategoryViewModel,
         couponViewModel: CouponViewModel,
-        onAddCoupon: (String, Double, Long, Long?, String?, String?, Boolean, () -> Unit) -> Unit,
+        onAddCoupon:
+                (
+                        String,
+                        Double,
+                        Long,
+                        Long?,
+                        String?,
+                        String?,
+                        String?,
+                        Boolean,
+                        () -> Unit) -> Unit,
         onDismiss: () -> Unit,
         onAddCategory: () -> Unit
 ) {
@@ -71,6 +82,8 @@ fun AddCouponDialog(
     var isOneTime by remember { mutableStateOf(false) }
     var expiration by remember { mutableStateOf<Long?>(null) }
     var redeemCode by remember { mutableStateOf<String?>("") }
+    var redemptionUrl by remember { mutableStateOf<String?>("") }
+    var isUrlMode by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf<Category?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
@@ -89,7 +102,18 @@ fun AddCouponDialog(
         parsedCoupon?.let { coupon ->
             name = coupon.storeName ?: name
             value = coupon.initialValue?.toString() ?: value
-            redeemCode = coupon.redeemCode ?: redeemCode
+
+            // Auto-fill logic for Code/URL
+            if (!coupon.redemptionUrl.isNullOrBlank()) {
+                redemptionUrl = coupon.redemptionUrl
+                isUrlMode = true
+                // Also fill code if available, just in case user switches back
+                redeemCode = coupon.redeemCode ?: redeemCode
+            } else {
+                redeemCode = coupon.redeemCode ?: redeemCode
+                isUrlMode = false
+            }
+
             coupon.expirationDate?.let {
                 val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                 expiration = sdf.parse(it)?.time
@@ -156,13 +180,36 @@ fun AddCouponDialog(
                         )
                     }
 
-                    OutlinedTextField(
-                            value = redeemCode ?: "",
-                            onValueChange = { redeemCode = it },
-                            label = { Text("Redeem Code") },
-                            leadingIcon = { Icon(Icons.Default.QrCode, contentDescription = null) },
-                            modifier = Modifier.fillMaxWidth(),
-                    )
+                    Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(if (isUrlMode) "Redemption URL" else "Redeem Code")
+                        Switch(checked = isUrlMode, onCheckedChange = { isUrlMode = it })
+                    }
+
+                    if (isUrlMode) {
+                        OutlinedTextField(
+                                value = redemptionUrl ?: "",
+                                onValueChange = { redemptionUrl = it },
+                                label = { Text("Redemption URL") },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Link, contentDescription = null)
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                        )
+                    } else {
+                        OutlinedTextField(
+                                value = redeemCode ?: "",
+                                onValueChange = { redeemCode = it },
+                                label = { Text("Redeem Code") },
+                                leadingIcon = {
+                                    Icon(Icons.Default.QrCode, contentDescription = null)
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                     Box {
                         OutlinedTextField(
                                 value =
@@ -305,6 +352,7 @@ fun AddCouponDialog(
                                             exp,
                                             categoryId,
                                             redeemCode,
+                                            redemptionUrl,
                                             creationMessage,
                                             isOneTime
                                     ) { onDismiss() }

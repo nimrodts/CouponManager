@@ -19,7 +19,7 @@ class ViewModelFactory(
             @Suppress("UNCHECKED_CAST")
             return CouponViewModel(
                     couponRepository,
-                    GeminiCouponExtractor(geminiApiKeyRepository),
+                    GeminiCouponExtractor(context, geminiApiKeyRepository),
                     userPreferencesRepository
             ) as
                     T

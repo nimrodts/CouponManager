@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -28,10 +29,12 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -47,6 +50,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -91,7 +95,7 @@ fun HomeScreen(
     var showArchiveConfirmationDialog by remember { mutableStateOf<Coupon?>(null) }
     var showDeleteConfirmationDialog by remember { mutableStateOf<Coupon?>(null) }
     var showOneTimeRedeemDialog by remember { mutableStateOf<Coupon?>(null) }
-    var showRedeemCodeDialog by remember { mutableStateOf<String?>(null) }
+    var showRedeemCodeDialog by remember { mutableStateOf<Coupon?>(null) }
     var showOriginalMessageDialog by remember { mutableStateOf<String?>(null) }
 
     var searchQuery by remember { mutableStateOf("") }
@@ -133,6 +137,9 @@ fun HomeScreen(
         }
     }
 
+    val pendingCoupons by couponViewModel.pendingCoupons.collectAsState(initial = emptyList())
+    var showPendingCouponsDialog by remember { mutableStateOf(false) }
+
     Scaffold(
             modifier =
                     Modifier.pointerInput(Unit) {
@@ -147,6 +154,32 @@ fun HomeScreen(
             }
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
+            if (pendingCoupons.isNotEmpty()) {
+                Surface(
+                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                        onClick = { showPendingCouponsDialog = true },
+                        modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                                Icons.Default.SmartToy,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                                "${pendingCoupons.size} Pending Coupons to Review",
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
             Row(
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -298,7 +331,7 @@ fun HomeScreen(
                                 onEditClick = { showEditCouponDialog = coupon },
                                 onArchiveClick = { showArchiveConfirmationDialog = coupon },
                                 onDeleteClick = { showDeleteConfirmationDialog = coupon },
-                                onLongPress = { showRedeemCodeDialog = coupon.redeemCode },
+                                onLongPress = { showRedeemCodeDialog = coupon },
                                 onHistoryClick = { onNavigateToHistory(coupon.id) },
                                 onViewMessageClick = {
                                     showOriginalMessageDialog = coupon.creationMessage
@@ -369,12 +402,25 @@ fun HomeScreen(
         )
     }
 
-    showRedeemCodeDialog?.let { redeemCode ->
-        RedeemCodeDialog(redeemCode = redeemCode, onDismiss = { showRedeemCodeDialog = null })
+    showRedeemCodeDialog?.let { coupon ->
+        RedeemCodeDialog(coupon = coupon, onDismiss = { showRedeemCodeDialog = null })
     }
 
     showOriginalMessageDialog?.let { message ->
         MessageDialog(message = message, onDismiss = { showOriginalMessageDialog = null })
+    }
+
+    if (showPendingCouponsDialog) {
+        PendingCouponsDialog(
+                pendingCoupons = pendingCoupons,
+                onApprove = { coupon -> couponViewModel.approve(coupon) },
+                onReject = { coupon -> couponViewModel.reject(coupon) },
+                onEdit = { coupon ->
+                    showPendingCouponsDialog = false
+                    showEditCouponDialog = coupon
+                },
+                onDismiss = { showPendingCouponsDialog = false }
+        )
     }
 }
 
@@ -476,6 +522,30 @@ fun CouponItem(
                                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
+                        }
+                    } else if (!coupon.redemptionUrl.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        androidx.compose.material3.Surface(
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp),
+                                color = MaterialTheme.colorScheme.tertiaryContainer,
+                        ) {
+                            Row(
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                        Icons.Default.Link,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                        text = "Link Available",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                )
+                            }
                         }
                     }
 

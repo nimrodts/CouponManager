@@ -21,6 +21,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +43,7 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -54,15 +56,22 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.MultiFormatWriter
 import com.google.zxing.WriterException
 import com.google.zxing.common.BitMatrix
+import com.nimroddayan.clipit.data.model.Coupon
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RedeemCodeDialog(
-        redeemCode: String,
+        coupon: Coupon,
         onDismiss: () -> Unit,
 ) {
+        val redeemCode = coupon.redeemCode
+        val redemptionUrl = coupon.redemptionUrl
+        val displayCode =
+                if (!redeemCode.isNullOrBlank()) redeemCode
+                else if (!redemptionUrl.isNullOrBlank()) redemptionUrl else ""
+
         val clipboardManager = LocalClipboardManager.current
         val context = LocalContext.current
         DisposableEffect(Unit) {
@@ -91,12 +100,31 @@ fun RedeemCodeDialog(
         var qrBitmap by remember { mutableStateOf<Bitmap?>(null) }
         var barcodeBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
-        LaunchedEffect(redeemCode) {
-                val sanitizedCode = redeemCode.filter { it.isLetterOrDigit() }
+        LaunchedEffect(displayCode) {
+                val sanitizedCode = displayCode.filter { it.isLetterOrDigit() || it in ":/._-?=&%" }
                 withContext(Dispatchers.Default) {
-                        qrBitmap = generateBarcode(sanitizedCode, BarcodeFormat.QR_CODE, 200, 200)
-                        barcodeBitmap =
-                                generateBarcode(sanitizedCode, BarcodeFormat.CODE_128, 300, 100)
+                        if (sanitizedCode.isNotBlank()) {
+                                qrBitmap =
+                                        generateBarcode(
+                                                sanitizedCode,
+                                                BarcodeFormat.QR_CODE,
+                                                200,
+                                                200
+                                        )
+                                // Only generate linear barcode if it's not a long URL to avoid
+                                // unreadable density
+                                if (sanitizedCode.length < 80) {
+                                        barcodeBitmap =
+                                                generateBarcode(
+                                                        sanitizedCode,
+                                                        BarcodeFormat.CODE_128,
+                                                        300,
+                                                        100
+                                                )
+                                } else {
+                                        barcodeBitmap = null
+                                }
+                        }
                 }
         }
 
@@ -205,7 +233,7 @@ fun RedeemCodeDialog(
                                                         )
                                                         .clickable {
                                                                 clipboardManager.setText(
-                                                                        AnnotatedString(redeemCode)
+                                                                        AnnotatedString(displayCode)
                                                                 )
                                                         }
                                                         .padding(
@@ -215,7 +243,7 @@ fun RedeemCodeDialog(
                                         contentAlignment = Alignment.Center
                                 ) {
                                         Text(
-                                                text = redeemCode,
+                                                text = displayCode,
                                                 fontSize = 24.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 fontFamily = FontFamily.Monospace,
@@ -234,6 +262,17 @@ fun RedeemCodeDialog(
                                 )
 
                                 Spacer(modifier = Modifier.height(24.dp))
+
+                                if (!redemptionUrl.isNullOrBlank()) {
+                                        val uriHandler = LocalUriHandler.current
+                                        Button(
+                                                onClick = { uriHandler.openUri(redemptionUrl) },
+                                                modifier = Modifier.fillMaxWidth()
+                                        ) { Text("Open Link") }
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
 
                                 TextButton(
                                         onClick = onDismiss,
@@ -295,6 +334,3 @@ private fun generateBarcode(
                 null
         }
 }
-
-
-

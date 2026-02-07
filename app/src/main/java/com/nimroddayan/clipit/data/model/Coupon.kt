@@ -29,6 +29,6 @@ data class Coupon(
         val isArchived: Boolean = false,
         val creationMessage: String? = null,
         val isOneTime: Boolean = false,
+        val isPending: Boolean = false,
+        val redemptionUrl: String? = null,
 )
-
-
